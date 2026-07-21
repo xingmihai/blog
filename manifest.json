@@ -1,0 +1,16 @@
+{
+  "name": "星觅海的博客",
+  "short_name": "星觅海",
+  "description": "星觅海的个人博客，分享技术文章和生活随笔",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0061a4",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

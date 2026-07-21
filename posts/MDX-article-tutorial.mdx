@@ -1,0 +1,90 @@
+---
+title: 你好，MDX！
+date: 2026-07-20
+tags: [mdx, 教程]
+description: 一篇展示 MDX 组件用法的示例文章，包含提示框、卡片和多栏布局
+cover: https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200
+---
+
+# 什么是 MDX？
+
+MDX 是一种让你在 Markdown 文档中无缝使用 JSX 组件的格式。它结合了 Markdown 的简洁和组件系统的强大，让技术博客的表达能力提升了一个台阶。
+
+## 提示框组件
+
+<Alert type="info">
+  MDX 让你可以在文章中插入可复用的 React 组件，同时保留 Markdown 的所有语法支持，比如**粗体**、`行内代码`和[链接](https://mdxjs.com)。
+</Alert>
+
+<Alert type="warning">
+  注意：本文是一个示例，展示如何在星觅海的博客中使用 MDX 编写文章。所有组件在构建时编译为静态 HTML，无需浏览器加载 React。
+</Alert>
+
+<Alert type="success">
+  成功接入 MDX！现在你可以使用组件来丰富你的博客内容了。
+</Alert>
+
+## 卡片布局
+
+<Card title="MDX 的核心优势">
+- **组件化**：复用 React 组件，保持视觉一致性
+- **表达式**：可以在 JSX 中使用 JavaScript 表达式
+- **生态**：直接利用 npm 上数百万的 React 组件
+
+<Badge>推荐</Badge> <Badge color="success">已验证</Badge>
+</Card>
+
+## 多栏布局
+
+<Columns>
+  <Column>
+    ### 左侧内容
+    这里是第一栏，可以放置文字、列表或任何 Markdown 内容。多栏布局非常适合展示对比信息。
+
+    - 支持无序列表
+    - 支持嵌套组件
+  </Column>
+  <Column>
+    ### 右侧内容
+    这里是第二栏。甚至可以在栏内放代码块：
+
+    ```js
+    const mdx = 'awesome';
+    console.log(mdx);
+    ```
+  </Column>
+</Columns>
+
+## 代码块与表格
+
+MDX 完全兼容标准 Markdown 语法：
+
+```jsx
+// 这是一段 JSX 示例代码
+function Welcome({ name }) {
+  return <h1>Hello, {name}!</h1>;
+}
+```
+
+| 特性 | Markdown | MDX |
+|------|----------|-----|
+| 标题语法 | ✅ | ✅ |
+| 自定义组件 | ❌ | ✅ |
+| 代码高亮 | ✅ | ✅ |
+| 表格 | ✅ | ✅ |
+
+## 引用与分割线
+
+> MDX 是书写技术文档的未来格式。
+>
+> 它让作者可以专注于内容，同时不牺牲表现力。
+
+---
+
+## 结语
+
+MDX 为这个纯静态博客带来了无限可能。你可以创建自定义的提示框、卡片、布局组件，让文章更加生动，而读者仍然享受到极速的加载体验。
+
+<Alert type="info">
+  提示：所有 MDX 组件在构建时会被编译为静态 HTML，因此无需在浏览器加载 React 运行时，保持博客的轻量快速。
+</Alert>
