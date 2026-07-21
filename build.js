@@ -227,6 +227,33 @@ function build() {
 
   fs.writeFileSync(OUTPUT_RSS, rss.trim());
   console.log('✅ rss.xml 生成完成');
+
+  // ========== 生成 sitemap.xml ==========
+  const OUTPUT_SITEMAP = path.join(__dirname, 'sitemap.xml');
+  const sitemapUrls = [
+    { loc: SITE_URL, lastmod: now, priority: '1.0' },
+    { loc: `${SITE_URL}/#/archive`, lastmod: now, priority: '0.8' },
+    { loc: `${SITE_URL}/#/about`, lastmod: now, priority: '0.8' },
+    { loc: `${SITE_URL}/#/friends`, lastmod: now, priority: '0.8' },
+    ...files.map(p => ({
+      loc: `${SITE_URL}/#/post/${p.slug}`,
+      lastmod: new Date(p.date).toISOString().split('T')[0],
+      priority: '0.7'
+    }))
+  ];
+  
+  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${sitemapUrls.map(u => `  <url>
+    <loc>${escapeXml(u.loc)}</loc>
+    <lastmod>${u.lastmod}</lastmod>
+    <priority>${u.priority}</priority>
+  </url>`).join('\n')}
+</urlset>`;
+  
+  fs.writeFileSync(OUTPUT_SITEMAP, sitemap.trim());
+  console.log('✅ sitemap.xml 生成完成');
+  // ======================================
   console.log(`📄 共 ${files.length} 篇文章（MDX: ${files.filter(f => f.format === 'mdx').length} 篇）`);
 }
 
