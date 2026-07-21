@@ -8,9 +8,9 @@
   "theme_color": "#0061a4",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "https://q1.qlogo.cn/g?b=qq&nk=1498934815&s=100",
+      "sizes": "100x100",
+      "type": "image/png"
     }
   ]
 }
