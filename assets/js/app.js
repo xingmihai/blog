@@ -1,7 +1,7 @@
 // ==================== 配置 ====================
 const CONFIG = {
   siteName: '星觅海的博客',
-  siteUrl: 'https://www.xmhai.cn',
+  siteUrl: 'https://mdui.xmhai.cn',
   walineServer: 'https://vercel-waline.xmhai.cn',
   postsDir: '/posts/',
 };
@@ -26,7 +26,9 @@ const escapeHtml = str => {
   return div.innerHTML;
 };
 const formatDate = str => {
+  if (!str) return '未知日期';
   const d = new Date(str);
+  if (isNaN(d.getTime())) return '未知日期';
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 const debounce = (fn, wait) => {
@@ -371,12 +373,6 @@ const routes = {
 };
 
 function parseRoute(hash) {
-  // 修复：直接访问非根路径且无 hash 时，应返回 404
-  // 例如访问 /不存在、/abc 等，服务器 fallback 到 index.html 后，前端不应显示首页
-  if (!location.hash && location.pathname !== '/' && location.pathname !== '/index.html') {
-    return { handler: render404, params: {} };
-  }
-
   const path = hash.replace('#', '') || '/';
   // 处理带查询参数的路径
   const [cleanPath, queryStr] = path.split('?');
@@ -405,8 +401,16 @@ function parseRoute(hash) {
 }
 
 async function handleRoute() {
-  const { handler, params } = parseRoute(location.hash);
   const container = $('page-container');
+
+  // 直接访问不存在的路径（非 hash 路由）时显示 404
+  if (location.pathname !== '/' && !location.hash) {
+    render404(container);
+    updateMeta('404', '页面不存在');
+    return;
+  }
+
+  const { handler, params } = parseRoute(location.hash);
 
   container.style.opacity = '0';
   container.style.transform = 'translateY(12px)';
@@ -612,107 +616,61 @@ async function renderHome(container, params = {}) {
 
 async function renderPost(container, params) {
   const { slug } = params;
-
-  // 先获取文章元数据，判断是否为 MDX
-  let postMeta = null;
   try {
-    await loadPosts();
-    postMeta = postsCache.find(p => p.slug === slug);
-  } catch (e) {}
+    // 先从 search.json 获取文章元数据，判断格式
+    const posts = await loadPosts();
+    const postMeta = posts.find(p => p.slug === slug);
+    const isMdx = postMeta && postMeta.format === 'mdx';
 
-  // ========== MDX 文章渲染 ==========
-  if (postMeta && postMeta.format === 'mdx') {
-    try {
+    let htmlContent = '';
+    let frontMatter = {};
+    let content = '';
+    let words = 0;
+
+    if (isMdx) {
+      // MDX 文章：加载编译后的 HTML
       const res = await fetch(`/posts-html/${slug}.html`);
       if (!res.ok) throw new Error('404');
-      const htmlBody = await res.text();
+      htmlContent = await res.text();
+      frontMatter = postMeta || {};
+      words = (postMeta && postMeta.content) ? postMeta.content.length : 0;
+    } else {
+      // Markdown 文章：加载 .md 并解析
+      const res = await fetch(`${CONFIG.postsDir}${slug}.md`);
+      if (!res.ok) throw new Error('404');
+      const md = await res.text();
+      const parsed = parseFrontMatter(md);
+      frontMatter = parsed.frontMatter;
+      content = parsed.content;
 
-      let html = '';
-      if (postMeta.cover) {
-        html += `<img src="${escapeHtml(postMeta.cover)}" style="width:100%;max-height:400px;object-fit:cover;border-radius:var(--mdui-shape-corner-large);margin-bottom:24px;" alt="文章封面" data-zoomable>`;
-      }
-      html += `
-        <div style="margin-bottom:24px;">
-          <h1 class="mdui-typescale-headline-large" style="margin-bottom:12px;">${escapeHtml(postMeta.title)}</h1>
-          <div class="mdui-typescale-body-small" style="opacity:0.7;">
-            <mdui-icon name="calendar_today" style="font-size:16px;vertical-align:text-bottom;margin-right:4px;"></mdui-icon>
-            ${formatDate(postMeta.date)} ·
-            ${(postMeta.tags||[]).map(t => `<mdui-chip style="margin-right:4px;cursor:pointer;" onclick="location.hash='/?tag=${encodeURIComponent(t)}'">${escapeHtml(t)}</mdui-chip>`).join('')}
-          </div>
-        </div>
-        <article class="mdui-prose post-content">${htmlBody}</article>
+      // 自定义语法：GitHub 仓库卡片
+      content = content.replace(
+        /::github\{card="([^"]+)"(?:\s+desc="([^"]*)")?\}/g,
+        (match, repo, desc = 'GitHub Repository') => {
+          const [user, repoName] = repo.split('/');
+          return `<div class="gh-wrap"><mdui-card class="gh-card" variant="filled" href="https://github.com/${repo}" target="_blank" clickable><div class="gh-header"><div class="gh-avatar-wrap"><img class="gh-avatar" src="https://github.com/${user}.png" alt="${user}"></div><div class="gh-info"><div class="gh-name">${user} / ${repoName}</div><div class="gh-desc">${desc}</div></div><mdui-icon name="open_in_new" style="opacity:0.4"></mdui-icon></div><div class="gh-badges"><a href="https://github.com/${repo}/stargazers" target="_blank" rel="noopener"><img src="https://img.shields.io/github/stars/${repo}?style=flat&logo=github&label=Stars" alt="Stars"></a><a href="https://github.com/${repo}/network/members" target="_blank" rel="noopener"><img src="https://img.shields.io/github/forks/${repo}?style=flat&logo=github&label=Forks" alt="Forks"></a><a href="https://github.com/${repo}/blob/main/LICENSE" target="_blank" rel="noopener"><img src="https://img.shields.io/github/license/${repo}?style=flat" alt="License"></a></div></mdui-card></div>`;
+        }
+      );
 
-        <mdui-divider style="margin:32px 0;"></mdui-divider>
+      htmlContent = marked.parse(content);
 
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
-          <div class="mdui-typescale-body-small" style="opacity:0.7;">
-            本文链接：<a href="${CONFIG.siteUrl}/#/post/${slug}" style="color:rgb(var(--mdui-color-primary));" onclick="event.preventDefault();navigator.clipboard.writeText(this.href);this.textContent='已复制';setTimeout(()=>this.textContent='${CONFIG.siteUrl}/#/post/${slug}',2000);">${CONFIG.siteUrl}/#/post/${slug}</a>
-          </div>
-        </div>
-
-        <div style="margin-top:24px;"><div id="waline"></div></div>
-      `;
-      container.innerHTML = html;
-
-      // 代码高亮
-      container.querySelectorAll('pre code').forEach(b => {
-        if (window.hljs) hljs.highlightElement(b);
-      });
-
-      // 代码复制按钮
-      initCodeCopy(container);
-
-      // 图片灯箱
-      container.querySelectorAll('img').forEach(img => {
-        if (!img.hasAttribute('loading')) img.setAttribute('loading', 'lazy');
-        if (!img.hasAttribute('data-zoomable')) img.setAttribute('data-zoomable', '');
-      });
-      initImageZoom(container);
-
-      // 生成目录
-      generateTOC(container);
-
-      initWaline(slug);
-      updateMeta(postMeta.title, postMeta.description||'');
-      return;
-    } catch (err) {
-      render404(container);
-      return;
+      // 后处理：将 mermaid 代码块替换为 mermaid 容器
+      htmlContent = htmlContent.replace(
+        /<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
+        (match, code) => {
+          const decoded = code
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+          return `<div class="mermaid">${decoded}</div>`;
+        }
+      );
+      words = countWords(content);
     }
-  }
 
-  // ========== 原有 Markdown 文章渲染 ==========
-  try {
-    const res = await fetch(`${CONFIG.postsDir}${slug}.md`);
-    if (!res.ok) throw new Error('404');
-    const md = await res.text();
-    const { frontMatter, content } = parseFrontMatter(md);
-    // ========== 自定义语法：GitHub 仓库卡片 ==========
-let processedContent = content.replace(
-  /::github\{card="([^"]+)"(?:\s+desc="([^"]*)")?\}/g,
-  (match, repo, desc = 'GitHub Repository') => {
-    const [user, repoName] = repo.split('/');
-    return `<div class="gh-wrap"><mdui-card class="gh-card" onclick="window.open('https://github.com/${repo}','_blank')"><div class="gh-header"><img class="gh-avatar" src="https://github.com/${user}.png" alt="${user}"><div class="gh-info"><div class="gh-name">${user} / ${repoName}</div><div class="gh-desc">${desc}</div></div><mdui-icon name="open_in_new" style="opacity:0.4"></mdui-icon></div><div class="gh-badges"><a href="https://github.com/${repo}/stargazers" target="_blank" rel="noopener"><img src="https://img.shields.io/github/stars/${repo}?style=flat&logo=github&label=Stars" alt="Stars"></a><a href="https://github.com/${repo}/network/members" target="_blank" rel="noopener"><img src="https://img.shields.io/github/forks/${repo}?style=flat&logo=github&label=Forks" alt="Forks"></a><a href="https://github.com/${repo}/blob/main/LICENSE" target="_blank" rel="noopener"><img src="https://img.shields.io/github/license/${repo}?style=flat" alt="License"></a></div></mdui-card></div>`;
-  }
-);
 
-let htmlContent = marked.parse(processedContent);
-// ================================================
-
-    // 后处理：将 mermaid 代码块替换为 mermaid 容器
-    htmlContent = htmlContent.replace(
-      /<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
-      (match, code) => {
-        const decoded = code
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&amp;/g, '&')
-          .replace(/&quot;/g, '"')
-          .replace(/&#39;/g, "'");
-        return `<div class="mermaid">${decoded}</div>`;
-      }
-    );
-    const words = countWords(content);
 
     let html = '';
     if (frontMatter.cover) {
@@ -880,7 +838,7 @@ async function renderAbout(container) {
 async function renderFriends(container) {
   const res = await fetch('/friends.json');
   const friends = await res.json();
-  let html = '<div class="mdui-typescale-headline-medium" style="margin-bottom:24px;">点击可以查看最近10篇文章，排名不分前后</div>';
+  let html = '<div class="mdui-typescale-headline-medium" style="margin-bottom:24px;">朋友们</div>';
   html += '<div class="friends-grid">';
   friends.forEach(f => {
     html += `
@@ -940,43 +898,34 @@ async function loadFriendRSS(f) {
   const rssContainer = $('friend-rss');
   if (!rssContainer) return;
 
-  // 使用多个 RSS 代理作为 fallback
-  const rssUrls = [
-    `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.rss)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(f.rss)}`,
-  ];
+  try {
+    const rssRes = await fetch(`/api/rss?url=${encodeURIComponent(f.rss)}`, {
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!rssRes.ok) throw new Error(`HTTP ${rssRes.status}`);
+    const rssData = await rssRes.json();
 
-  let rssData = null;
-  for (const url of rssUrls) {
-    try {
-      const rssRes = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (!rssRes.ok) continue;
-      const data = await rssRes.json();
-      if (data.status === 'ok' || data.items) {
-        rssData = data;
-        break;
-      }
-    } catch (e) { /* continue */ }
-  }
+    if (!rssContainer) return;
 
-  if (!rssContainer) return;
+    if (rssData.status !== 'ok' || !rssData.items) {
+      throw new Error(rssData.message || 'Invalid RSS');
+    }
 
-  if (!rssData || !rssData.items) {
+    let list = '<mdui-list>';
+    rssData.items.slice(0, 10).forEach(item => {
+      const title = escapeHtml(item.title || '无标题').replace(/"/g, '&quot;');
+      const date = formatDate(item.pubDate).replace(/"/g, '&quot;');
+      list += '<mdui-list-item rounded href="' + escapeHtml(item.link) + '" target="_blank" rel="noopener" headline="' + title + '" description="' + date + '"></mdui-list-item>';
+    });
+    list += '</mdui-list>';
+    rssContainer.innerHTML = list;
+  } catch (err) {
+    if (!rssContainer) return;
     rssContainer.innerHTML = `<mdui-card style="padding:16px;text-align:center;">
       <mdui-icon name="rss_feed" style="font-size:32px;opacity:0.4;"></mdui-icon>
       <div class="mdui-typescale-body-medium" style="margin-top:8px;">RSS 加载失败，请直接访问博客</div>
     </mdui-card>`;
-    return;
   }
-
-  let list = '<mdui-list>';
-  rssData.items.slice(0, 10).forEach(item => {
-    const title = escapeHtml(item.title || '无标题').replace(/"/g, '&quot;');
-    const date = formatDate(item.pubDate).replace(/"/g, '&quot;');
-    list += '<mdui-list-item rounded href="' + escapeHtml(item.link) + '" target="_blank" rel="noopener" headline="' + title + '" description="' + date + '"></mdui-list-item>';
-  });
-  list += '</mdui-list>';
-  rssContainer.innerHTML = list;
 }
 
 function render404(container) {
