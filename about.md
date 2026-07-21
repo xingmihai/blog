@@ -183,7 +183,7 @@ xmh-mui 不是一个"大而全"的博客框架，而是一个"小而美"的个�
 
 如果你也喜欢这种简单直接的方案，欢迎 Star 和 Fork：
 
-::github{card="xingmihai/xmh-mdui" desc="MDUI v2 个人博客主题"}
+<div class="gh-wrap"><mdui-card class="gh-card" onclick="window.open('https://github.com/用户名/仓库名','_blank')"><div class="gh-header"><img class="gh-avatar" src="https://github.com/用户名.png" alt="用户名"><div class="gh-info"><div class="gh-name">用户名 / 仓库名</div><div class="gh-desc">仓库描述</div></div><mdui-icon name="open_in_new" style="opacity:0.4"></mdui-icon></div><div class="gh-badges"><a href="https://github.com/用户名/仓库名/stargazers" target="_blank" rel="noopener"><img src="https://img.shields.io/github/stars/用户名/仓库名?style=flat&logo=github&label=Stars" alt="Stars"></a><a href="https://github.com/用户名/仓库名/network/members" target="_blank" rel="noopener"><img src="https://img.shields.io/github/forks/用户名/仓库名?style=flat&logo=github&label=Forks" alt="Forks"></a><a href="https://github.com/用户名/仓库名/blob/main/LICENSE" target="_blank" rel="noopener"><img src="https://img.shields.io/github/license/用户名/仓库名?style=flat" alt="License"></a></div></mdui-card></div>
 
 ---
 
