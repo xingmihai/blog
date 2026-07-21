@@ -153,7 +153,6 @@ console.log("代码块也支持");
 
 在文章中插入一行即可展示 GitHub 仓库信息：
 
-```markdown
 ::github{card="xingmihai/xmh-mdui" desc="MDUI v2 个人博客主题"}
 ```
 
