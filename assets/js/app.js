@@ -1,7 +1,7 @@
 // ==================== 配置 ====================
 const CONFIG = {
   siteName: '星觅海的博客',
-  siteUrl: 'https://mdui.xmhai.cn',
+  siteUrl: 'https://www.xmhai.cn',
   walineServer: 'https://vercel-waline.xmhai.cn',
   postsDir: '/posts/',
 };
