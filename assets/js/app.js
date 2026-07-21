@@ -874,14 +874,14 @@ async function renderFriendDetail(container, params) {
         <div class="mdui-typescale-body-medium" style="opacity:0.7;margin-top:8px;">${escapeHtml(f.desc||'')}</div>
         <div style="margin-top:12px;">
           <a href="${escapeHtml(f.url)}" target="_blank" rel="noopener">
-            <mdui-button variant="filled">访问博客</mdui-button>
+            <mdui-button variant="filled">访问源站</mdui-button>
           </a>
         </div>
       </div>
       <div class="mdui-typescale-title-medium" style="margin-bottom:16px;">最新文章</div>
       <div id="friend-rss">
         <mdui-linear-progress style="margin:24px 0;"></mdui-linear-progress>
-        <div style="text-align:center;" class="mdui-typescale-body-small">正在加载 RSS…</div>
+        <div style="text-align:center;" class="mdui-typescale-body-small">正在加载 文章…</div>
       </div>
     `;
     container.innerHTML = html;
@@ -923,7 +923,7 @@ async function loadFriendRSS(f) {
     if (!rssContainer) return;
     rssContainer.innerHTML = `<mdui-card style="padding:16px;text-align:center;">
       <mdui-icon name="rss_feed" style="font-size:32px;opacity:0.4;"></mdui-icon>
-      <div class="mdui-typescale-body-medium" style="margin-top:8px;">RSS 加载失败，请直接访问博客</div>
+      <div class="mdui-typescale-body-medium" style="margin-top:8px;">文章 加载失败，请直接访问源站</div>
     </mdui-card>`;
   }
 }
