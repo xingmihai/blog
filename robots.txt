@@ -1,3 +1,10 @@
 User-agent: *
 Allow: /
-Sitemap: https://www.xmhai.cn/rss.xml
+
+# 禁止爬虫索引静态资源目录
+Disallow: /assets/
+Disallow: /posts/
+Disallow: /posts-html/
+
+# Sitemap
+Sitemap: https://www.xmhai.cn/sitemap.xml
