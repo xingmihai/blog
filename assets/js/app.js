@@ -371,6 +371,12 @@ const routes = {
 };
 
 function parseRoute(hash) {
+  // 修复：直接访问非根路径且无 hash 时，应返回 404
+  // 例如访问 /不存在、/abc 等，服务器 fallback 到 index.html 后，前端不应显示首页
+  if (!location.hash && location.pathname !== '/' && location.pathname !== '/index.html') {
+    return { handler: render404, params: {} };
+  }
+
   const path = hash.replace('#', '') || '/';
   // 处理带查询参数的路径
   const [cleanPath, queryStr] = path.split('?');
