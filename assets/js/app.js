@@ -698,7 +698,7 @@ async function renderPost(container, params) {
          <span id="post-views">--</span>
        </div>
        <div style = "margin-top:8px;" >
-         $ {(frontMatter.tags || []).map(t => `<mdui-chip style="margin-right:4px;cursor:pointer;" onclick="location.hash='/?tag=${encodeURIComponent(t)}'">${escapeHtml(t)}</mdui-chip>`).join('') }
+         ${(frontMatter.tags || []).map(t => `<mdui-chip style="margin-right:4px;cursor:pointer;" onclick="location.hash='/?tag=${encodeURIComponent(t)}'">${escapeHtml(t)}</mdui-chip>`).join('') }
       </div>
       </div>
       <article class="mdui-prose post-content">${htmlContent}</article>
@@ -1062,7 +1062,12 @@ document.addEventListener('DOMContentLoaded', () => {
   initReadingProgress();
   initMarked();
   initMermaid();
-  updatePageviews();
+  
+  // 只在非文章页面上报全局统计；文章页由 renderPost 统一上报
+  if (!location.hash.startsWith('#/post/')) {
+    updatePageviews();
+  }
+  
   handleRoute();
   window.addEventListener('hashchange', handleRoute);
 });
