@@ -740,7 +740,7 @@ async function renderPost(container, params) {
     renderPlantUML(container);
     
     // 上报并获取本文章阅读数
-    updatePageviews(`post:${slug}`).then(data => {
+    updatePageviews(`#post:${slug}`).then(data => {
       const viewsEl = $('post-views');
       if (viewsEl && data.pageViews != null) {
         viewsEl.textContent = `${data.pageViews} 次阅读`;
