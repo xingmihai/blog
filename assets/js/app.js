@@ -962,6 +962,7 @@ function initWaline(path) {
     path: `#/post/${path}`,
     dark: 'html.mdui-theme-dark',
     lang: 'zh-CN',
+    pageview: true,
   });
 }
 
