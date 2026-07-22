@@ -959,7 +959,7 @@ function initWaline(path) {
   window.WalineInit({
     el: '#waline',
     serverURL: CONFIG.walineServer,
-    path: `#/post/${path}`,
+    path: `/post/${path}`,
     dark: 'html.mdui-theme-dark',
     lang: 'zh-CN',
   });
