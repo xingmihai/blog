@@ -4,6 +4,7 @@ const CONFIG = {
   siteUrl: 'https://www.xmhai.cn',
   walineServer: 'https://vercel-waline.xmhai.cn',
   postsDir: '/posts/',
+  startDate: '2025-09-05T18:12:52',  // ← 改成你的真实建站时间
 };
 
 // ==================== 状态 ====================
@@ -1052,6 +1053,34 @@ function initPWA() {
   }
 }
 
+// ==================== 运行时间 ====================
+function updateUptime() {
+  const el = $('site-uptime');
+  if (!el || !CONFIG.startDate) return;
+
+  const start = new Date(CONFIG.startDate);
+  const now = new Date();
+  const diff = now - start;
+  if (diff < 0) {
+    el.textContent = '即将上线';
+    return;
+  }
+
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+  const seconds = Math.floor((diff % 60000) / 1000);
+
+  // 超过一年显示「X年X天」，否则显示「X天X时X分X秒」
+  if (days >= 365) {
+    const years = Math.floor(days / 365);
+    const remainDays = days % 365;
+    el.textContent = `已运行 ${years}年 ${remainDays}天 ${hours}时 ${minutes}分 ${seconds}秒`;
+  } else {
+    el.textContent = `已运行 ${days}天 ${hours}时 ${minutes}分 ${seconds}秒`;
+  }
+}
+
 // ==================== 初始化入口 ====================
 document.addEventListener('DOMContentLoaded', () => {
   $('year').textContent = new Date().getFullYear();
@@ -1062,12 +1091,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initReadingProgress();
   initMarked();
   initMermaid();
-  
-  // 只在非文章页面上报全局统计；文章页由 renderPost 统一上报
+
+  // 只在非文章页面上报全局统计
   if (!location.hash.startsWith('#/post/')) {
     updatePageviews();
   }
-  
+
+  // 启动运行时间（每秒刷新）
+  updateUptime();
+  setInterval(updateUptime, 1000);
+
   handleRoute();
   window.addEventListener('hashchange', handleRoute);
 });
