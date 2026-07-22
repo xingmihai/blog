@@ -689,13 +689,17 @@ async function renderPost(container, params) {
     html += `
       <div style="margin-bottom:24px;">
         <h1 class="mdui-typescale-headline-large" style="margin-bottom:12px;">${escapeHtml(frontMatter.title||slug)}</h1>
-        <div class="mdui-typescale-body-small" style="opacity:0.7;">
-          <mdui-icon name="calendar_today" style="font-size:16px;vertical-align:text-bottom;margin-right:4px;"></mdui-icon>
-          ${formatDate(frontMatter.date)} · 
-          <mdui-icon name="text_snippet" style="font-size:16px;vertical-align:text-bottom;margin-right:4px;"></mdui-icon>
-          ${words} 字 ·
-          ${(frontMatter.tags||[]).map(t => `<mdui-chip style="margin-right:4px;cursor:pointer;" onclick="location.hash='/?tag=${encodeURIComponent(t)}'">${escapeHtml(t)}</mdui-chip>`).join('')}
-        </div>
+       <div class="mdui-typescale-body-small" style="opacity:0.7;">
+         <mdui-icon name="calendar_today" style="font-size:16px;vertical-align:text-bottom;margin-right:4px;"></mdui-icon>
+         ${formatDate(frontMatter.date)} · 
+         <mdui-icon name="text_snippet" style="font-size:16px;vertical-align:text-bottom;margin-right:4px;"></mdui-icon>
+         ${words} 字 · 
+         <mdui-icon name="visibility" style="font-size:16px;vertical-align:text-bottom;margin-right:4px;"></mdui-icon>
+         <span id="post-views">--</span>
+       </div>
+       <div style = "margin-top:8px;" >
+         $ {(frontMatter.tags || []).map(t => `<mdui-chip style="margin-right:4px;cursor:pointer;" onclick="location.hash='/?tag=${encodeURIComponent(t)}'">${escapeHtml(t)}</mdui-chip>`).join('') }
+      </div>
       </div>
       <article class="mdui-prose post-content">${htmlContent}</article>
 
@@ -734,6 +738,14 @@ async function renderPost(container, params) {
 
     // 渲染 PlantUML 图表
     renderPlantUML(container);
+    
+    // 上报并获取本文章阅读数
+    updatePageviews(`post:${slug}`).then(data => {
+      const viewsEl = $('post-views');
+      if (viewsEl && data.pageViews != null) {
+        viewsEl.textContent = `${data.pageViews} 次阅读`;
+      }
+    });
 
     initWaline(slug);
     updateMeta(frontMatter.title||slug, frontMatter.description||'');
@@ -987,14 +999,31 @@ function initWaline(path) {
 }
 
 // ==================== 页脚统计 ====================
-async function updatePageviews() {
-  const el = $('pageviews');
+async function updatePageviews(page = 'global') {
+  const totalEl = $('pageviews-total');
+  const todayEl = $('pageviews-today');
+
   try {
-    const res = await fetch(`${CONFIG.walineServer}/api/pageview`);
+    // 上报本次访问（用 sendBeacon 更可靠，页面关闭也能发出去）
+    const payload = new Blob([JSON.stringify({ page })], { type: 'application/json' });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/stats', payload);
+    } else {
+      fetch('/api/stats', { method: 'POST', body: payload, keepalive: true }).catch(() => {});
+    }
+
+    // 读取统计数据
+    const res = await fetch(`/api/stats?page=${encodeURIComponent(page)}`);
     const data = await res.json();
-    el.textContent = `总访问 ${data.data || 0} 次`;
+
+    if (totalEl) totalEl.textContent = `总访问 ${data.total || 0} 次`;
+    if (todayEl) todayEl.textContent = `今日 ${data.today || 0}`;
+
+    return data;
   } catch (err) {
-    el.textContent = '访问量统计暂不可用';
+    if (totalEl) totalEl.textContent = '访问量统计暂不可用';
+    if (todayEl) todayEl.textContent = '';
+    return { total: 0, today: 0, pageViews: 0 };
   }
 }
 
