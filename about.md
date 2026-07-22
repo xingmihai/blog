@@ -31,23 +31,23 @@ bio: 热爱技术，喜欢分享，一起慢慢进步
 
 ```mermaid
 flowchart TB
-    subgraph 编写阶段["📝 编写阶段"]
+    subgraph 编写阶段 ["📝 编写阶段"]
         A1[作者编写<br/>Markdown / MDX 文章]
         A2[配置数据<br/>friends.json / about.md]
     end
 
-    subgraph 构建阶段["🔧 构建阶段 (Node.js)"]
+    subgraph 构建阶段 ["🔧 构建阶段 (Node.js)"]
         B1[@mdx-js/mdx<br/>编译 MDX → React/Vue 组件]
         B2[RSS Generator<br/>生成 rss.xml]
         B3[Search Index<br/>生成 search.json 索引]
         B4[静态资源打包<br/>HTML / CSS / JS]
     end
 
-    subgraph 部署阶段["🚀 部署阶段"]
+    subgraph 部署阶段 ["🚀 部署阶段"]
         C1[CDN / GitHub Pages<br/>托管静态文件]
     end
 
-    subgraph 用户访问阶段["👤 用户访问 (Browser)"]
+    subgraph 用户访问阶段 ["👤 用户访问 (Browser)"]
         D1[加载页面<br/>MDUI v2 渲染 UI 框架]
         D2[Marked 解析<br/>Markdown → HTML]
         D3[highlight.js<br/>代码语法高亮]
