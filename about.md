@@ -29,32 +29,56 @@ bio: 热爱技术，喜欢分享，一起慢慢进步
 
 整个博客由三部分组成：
 
-```
-┌─────────────────────────────────────────┐
-│              前端 (Browser)               │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐ │
-│  │  MDUI   │  │ Marked  │  │ Fuse.js │ │
-│  │  v2 UI  │  │ Markdown│  │  Search │ │
-│  └─────────┘  └─────────┘  └─────────┘ │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐ │
-│  │ highlight│  │ Mermaid │  │medium-zoom│
-│  │   .js   │  │  Chart  │  │  Lightbox │ │
-│  └─────────┘  └─────────┘  └─────────┘ │
-└─────────────────────────────────────────┘
-                    ↑
-┌─────────────────────────────────────────┐
-│              构建时 (Node.js)            │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐ │
-│  │@mdx-js/ │  │  RSS    │  │ Search  │ │
-│  │  mdx    │  │ Generator│ │  Index  │ │
-│  └─────────┘  └─────────┘  └─────────┘ │
-└─────────────────────────────────────────┘
-                    ↑
-┌─────────────────────────────────────────┐
-│              数据源                       │
-│         Markdown / MDX 文件              │
-│         about.md / friends.json          │
-└─────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph 编写阶段["📝 编写阶段"]
+        A1[作者编写<br/>Markdown / MDX 文章]
+        A2[配置数据<br/>friends.json / about.md]
+    end
+
+    subgraph 构建阶段["🔧 构建阶段 (Node.js)"]
+        B1[@mdx-js/mdx<br/>编译 MDX → React/Vue 组件]
+        B2[RSS Generator<br/>生成 rss.xml]
+        B3[Search Index<br/>生成 search.json 索引]
+        B4[静态资源打包<br/>HTML / CSS / JS]
+    end
+
+    subgraph 部署阶段["🚀 部署阶段"]
+        C1[CDN / GitHub Pages<br/>托管静态文件]
+    end
+
+    subgraph 用户访问阶段["👤 用户访问 (Browser)"]
+        D1[加载页面<br/>MDUI v2 渲染 UI 框架]
+        D2[Marked 解析<br/>Markdown → HTML]
+        D3[highlight.js<br/>代码语法高亮]
+        D4[Mermaid<br/>渲染流程图/图表]
+        D5[medium-zoom<br/>图片点击放大]
+        D6[Fuse.js + search.json<br/>本地模糊搜索]
+    end
+
+    A1 --> B1
+    A1 --> B2
+    A1 --> B3
+    A2 --> B2
+    A2 --> B3
+
+    B1 --> B4
+    B2 --> B4
+    B3 --> B4
+
+    B4 --> C1
+
+    C1 --> D1
+    D1 --> D2
+    D2 --> D3
+    D2 --> D4
+    D2 --> D5
+    C1 --> D6
+
+    style 编写阶段 fill:#e8f5e9
+    style 构建阶段 fill:#fff3e0
+    style 部署阶段 fill:#e3f2fd
+    style 用户访问阶段 fill:#fce4ec
 ```
 
 ### 前端：零框架依赖
