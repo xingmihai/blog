@@ -24,8 +24,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'          # ✅ 升级到这里
-          cache: 'npm'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm install             # ✅ 用 install 代替 ci
