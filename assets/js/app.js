@@ -558,6 +558,15 @@ function initImageZoom(container) {
 
 // ==================== 页面渲染器 ====================
 async function renderHome(container, params = {}) {
+  // 1. 先显示 loading
+  container.innerHTML = `
+    <div style="margin-bottom:24px;">
+      <div class="mdui-typescale-headline-medium">最新文章</div>
+    </div>
+    <mdui-linear-progress style="margin:24px 0;"></mdui-linear-progress>
+    <div style="text-align:center;" class="mdui-typescale-body-small">正在加载文章…</div>
+  `;
+
   try {
     const posts = await loadPosts();
     let filtered = posts;
@@ -598,6 +607,7 @@ async function renderHome(container, params = {}) {
     }
     container.innerHTML = html;
     updateMeta('首页', '星觅海的个人博客，分享技术文章和生活随笔');
+
   } catch (err) {
     console.error('首页加载失败:', err);
     container.innerHTML = `
