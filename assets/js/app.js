@@ -801,7 +801,22 @@ async function renderAbout(container) {
 
     const md = await res.text();
     const { frontMatter, content } = parseFrontMatter(md);
-    const body = marked.parse(content);
+    let body = marked.parse(content);
+
+    // ===== 新增：Mermaid 代码块转换（与 renderPost 保持一致）=====
+    body = body.replace(
+      /<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g,
+      (match, code) => {
+        const decoded = code
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+        return `<div class="mermaid">${decoded}</div>`;
+      }
+    );
+    // ============================================================
 
     let html = '<div style="text-align:center;margin-bottom:32px;">';
     if (frontMatter.avatar) {
@@ -814,6 +829,11 @@ async function renderAbout(container) {
     html += '</div>';
     html += `<article class="mdui-prose">${body}</article>`;
     container.innerHTML = html;
+
+    // ===== 新增：调用 Mermaid 渲染 =====
+    renderMermaid(container);
+    // ==================================
+
     updateMeta('关于', '关于星觅海');
   } catch (err) {
     console.error('关于页面加载失败:', err);
