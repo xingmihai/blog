@@ -30,55 +30,28 @@ bio: 热爱技术，喜欢分享，一起慢慢进步
 整个博客由三部分组成：
 
 ```mermaid
-flowchart TB
-    subgraph 编写阶段["📝 编写阶段"]
-        A1[作者编写<br/>Markdown / MDX 文章]
-        A2[配置数据<br/>friends.json / about.md]
-    end
+graph TD
+    Start([画面帧输入]) --> CheckName{1. 前置哨兵: Name Box 是否有字?}
+    CheckName -- 无文字 --> Exit([Fail-Fast 退出: 非对话场景])
+    CheckName -- 有文字 --> CheckTitle{2. 检测 Title 称号框}
 
-    subgraph 构建阶段["🔧 构建阶段 (Node.js)"]
-        B1[@mdx-js/mdx<br/>编译 MDX → React/Vue 组件]
-        B2[RSS Generator<br/>生成 rss.xml]
-        B3[Search Index<br/>生成 search.json 索引]
-        B4[静态资源打包<br/>HTML / CSS / JS]
-    end
+    CheckTitle -- 存在 --> AddTitleOffset[累加 Title 偏置: Y + 25] --> CheckAlias
+    CheckTitle -- 不存在 --> CheckAlias{3. 检测 Alias 别名框}
 
-    subgraph 部署阶段["🚀 部署阶段"]
-        C1[CDN / GitHub Pages<br/>托管静态文件]
-    end
+    CheckAlias -- 存在 --> AddAliasOffset[累加 Alias 偏置: Y + 30] --> ApplyCoords
+    CheckAlias -- 不存在 --> ApplyCoords[计算出最终的 dl 正文 Bounding Box]
 
-    subgraph 用户访问阶段["👤 用户访问 (Browser)"]
-        D1[加载页面<br/>MDUI v2 渲染 UI 框架]
-        D2[Marked 解析<br/>Markdown → HTML]
-        D3[highlight.js<br/>代码语法高亮]
-        D4[Mermaid<br/>渲染流程图/图表]
-        D5[medium-zoom<br/>图片点击放大]
-        D6[Fuse.js + search.json<br/>本地模糊搜索]
-    end
+    ApplyCoords --> CheckDL2{4. 反向高位检测 dl2 行?}
+    CheckDL2 -- 存在 --> TwoLines[当前一定为双行对话] --> DetectChoices
+    CheckDL2 -- 不存在 --> OneLine[单行对话, 仅识别 dl1] --> DetectChoices
 
-    A1 --> B1
-    A1 --> B2
-    A1 --> B3
-    A2 --> B2
-    A2 --> B3
-
-    B1 --> B4
-    B2 --> B4
-    B3 --> B4
-
-    B4 --> C1
-
-    C1 --> D1
-    D1 --> D2
-    D2 --> D3
-    D2 --> D4
-    D2 --> D5
-    C1 --> D6
-
-    style 编写阶段 fill:#e8f5e9
-    style 构建阶段 fill:#fff3e0
-    style 部署阶段 fill:#e3f2fd
-    style 用户访问阶段 fill:#fce4ec
+    DetectChoices{5. 反向高位检测 Choice3?}
+    DetectChoices -- 存在 --> C3[判定为 3 个分支选项]
+    DetectChoices -- 否 --> CheckC2{6. 检测 Choice2?}
+    CheckC2 -- 存在 --> C2[判定为 2 个分支选项]
+    CheckC2 -- 否 --> CheckC1{7. 检测 Choice1?}
+    CheckC1 -- 存在 --> C1[1 个分支选项]
+    CheckC1 -- 否 --> C0[无分支纯对话场景]
 ```
 
 ### 前端：零框架依赖
