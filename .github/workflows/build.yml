@@ -1,26 +1,15 @@
 name: Build and Deploy Blog
 
 on:
-  # 每次推送到 main 分支时触发
   push:
     branches: [main, master]
-    paths:
-      - 'posts/**'
-      - 'build.js'
-      - 'package.json'
-      - '.github/workflows/**'
-  # 允许手动触发
   workflow_dispatch:
-  # 每天凌晨自动构建（可选）
-  # schedule:
-  #   - cron: '0 0 * * *'
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# 防止并发构建
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -35,11 +24,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'          # ✅ 升级到这里
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install             # ✅ 用 install 代替 ci
 
       - name: Build blog
         run: node build.js
@@ -47,14 +36,12 @@ jobs:
       - name: Prepare deploy directory
         run: |
           mkdir -p _site
-          # 复制构建产物
           cp -r posts-html _site/ 2>/dev/null || true
           cp search.json _site/
           cp rss.xml _site/
           cp sitemap.xml _site/
-          # 如果有前端静态文件也复制过去
-          cp -r public/* _site/ 2>/dev/null || true
           cp index.html _site/ 2>/dev/null || true
+          cp -r public/* _site/ 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
