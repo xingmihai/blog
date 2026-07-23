@@ -1,5 +1,5 @@
 ---
-title: Instant Mail：您的全能临时邮箱助手，隐私与便捷兼得
+title: Instant Mail
 categories: email
 tags:
   - email
