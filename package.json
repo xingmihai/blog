@@ -1,9 +1,10 @@
 {
   "name": "mdui-v2-blog",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Pure static blog powered by MDUI v2 with MDX support",
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "dev": "python -m http.server 8080"
   },
   "dependencies": {
     "@mdx-js/mdx": "^3.0.0",
