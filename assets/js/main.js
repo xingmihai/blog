@@ -9,6 +9,16 @@ let isMobile = window.innerWidth < 840;
 let sidebarCollapsed = false;
 let sidebarOpenMobile = false;
 
+function refreshMDUIComponents() {
+  // 强制 MDUI Web Components 重新计算布局
+  // 解决在 transform 隐藏容器中初始化导致的渲染问题
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+}
+
 function initSidebar() {
   const sidebar = $('sidebar');
   const main = $('main-content');
@@ -35,6 +45,11 @@ function initSidebar() {
       sidebarOpenMobile = !sidebarOpenMobile;
       sidebar.classList.toggle('mobile-open', sidebarOpenMobile);
       overlay.classList.toggle('active', sidebarOpenMobile);
+
+      // 修复：侧边栏打开后强制 MDUI 组件重排
+      if (sidebarOpenMobile) {
+        setTimeout(refreshMDUIComponents, 320);
+      }
     } else {
       sidebarCollapsed = !sidebarCollapsed;
       sidebar.classList.toggle('collapsed', sidebarCollapsed);
