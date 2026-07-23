@@ -386,14 +386,16 @@ img[loading="lazy"] {
 @media (max-width: 839px) {
   .sidebar {
     width: 280px;
-    min-width: 280px; /* 确保组件初始化时有足够布局空间 */
-    transform: translateX(-100%);
-    transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+    min-width: 280px;
+    left: -280px; /* 改用 left 定位，元素始终参与布局 */
+    transform: none;
+    transition: left 0.3s cubic-bezier(0.2, 0, 0, 1);
     border-radius: 0 var(--mdui-shape-corner-extra-large) var(--mdui-shape-corner-extra-large) 0 !important;
   }
 
   .sidebar.mobile-open {
-    transform: translateX(0);
+    left: 0;
+    transform: none;
   }
 
   .main-content {
@@ -420,12 +422,17 @@ img[loading="lazy"] {
     width: 280px;
     top: 0;
     height: 100vh;
+    right: -280px; /* 改用 right 定位 */
+    left: auto;
+    transform: none;
     border-radius: var(--mdui-shape-corner-extra-large) 0 0 var(--mdui-shape-corner-extra-large) !important;
     z-index: 101;
+    transition: right 0.3s cubic-bezier(0.2, 0, 0, 1);
   }
 
   .toc-sidebar.open {
-    transform: translateX(0);
+    right: 0;
+    transform: none;
   }
 
   .back-to-top {

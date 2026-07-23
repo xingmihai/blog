@@ -10,13 +10,24 @@ let sidebarCollapsed = false;
 let sidebarOpenMobile = false;
 
 function refreshMDUIComponents() {
-  // 强制 MDUI Web Components 重新计算布局
-  // 解决在 transform 隐藏容器中初始化导致的渲染问题
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event('resize'));
+  // 双重保险：强制 MDUI Web Components 重新计算布局
+  // 方案1：left定位已解决根本问题，此函数作为兜底
+  setTimeout(() => {
+    // 强制浏览器重排
+    document.body.offsetHeight;
+
+    // 遍历所有 mdui-list-item，通过属性微变触发 Lit 更新
+    document.querySelectorAll('mdui-list-item').forEach(item => {
+      const original = item.active;
+      item.active = !original;
+      requestAnimationFrame(() => {
+        item.active = original;
+      });
     });
-  });
+
+    // 派发 resize 事件
+    window.dispatchEvent(new Event('resize'));
+  }, 350);
 }
 
 function initSidebar() {
