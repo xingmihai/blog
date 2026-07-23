@@ -10,19 +10,19 @@
   <meta property="og:description" content="星觅海的个人博客，分享技术文章和生活随笔">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.xmhai.cn">
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/png" href="https://q1.qlogo.cn/g?b=qq&nk=1498934815&s=100">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <link rel="stylesheet" href="mdui.css">
-  <script src="mdui.global.js"></script>
-  <link rel="stylesheet" href="assets/css/atom-one-dark.min.css">
-  <script src="assets/js/highlight.min.js"></script>
-  <script src="assets/js/marked.min.js"></script>
-  <script src="assets/js/fuse.min.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/@waline/client/dist/waline.css">
-  <link rel="stylesheet" href="assets/css/style2.css">
-  <script src="assets/js/medium-zoom.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/mdui@2.1.3/mdui.css">
+  <script src="https://unpkg.com/mdui@2.1.3/mdui.global.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.0/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/@waline/client@3.3.0/dist/waline.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js"></script>
   <link rel="stylesheet" href="/assets/css/style.css">
   <script>
     (function() {
@@ -34,8 +34,8 @@
       else html.classList.add('mdui-theme-auto');
     })();
   </script>
-  <script src="assets/js/mermaid.min.js"></script>
-  <script src="assets/js/plantuml-encoder.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
 </head>
 <body>
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -127,31 +127,30 @@
         </a>
       </div>
       <div class="mdui-typescale-body-small footer-copy">
-        © <span id="year"></span> 星觅海 · Powered by MDUI
-      </div>
-      <div class="pageviews">
+        © <span id="year"></span> 星觅海 · 
         <span id="pageviews-total">加载中...</span> · 
-        <span id="pageviews-today">今日 0</span>
-      </div>
-      <div class="site-uptime">
+        <span id="pageviews-today">今日 0</span> · 
+        Powered by MDUI
         <span id="site-uptime">加载中...</span>
       </div>
-      <div class="icp">
+      <dev>
       <a href="https://icp.gov.moe/?keyword=20259910" target="_blank" rel="noopener noreferrer"><img alt="icp" src="/assets/images/icp.svg" /></a>
-      </div>
-      <div class="other">
+      </dev>
+      <dev>
       <a href="https://www.blogsclub.org/certificate/10000218" target="_blank"><img src="https://www.blogsclub.org/images/blue-cert.png" style="width:117px;height:41px;"></a>
+      </dev>
+      <dev>
       <a href="https://www.blogsclub.org/rank.html" target="_blank">
         <img src="https://www.blogsclub.org/badge/www.xmhai.cn" style="height:60px!important" loading="lazy"></a>
-      </div>
+      </dev>
       <div class="mdui-typescale-body-small footer-icp"></div>
     </footer>
   </div>
 
   <script type="module">
-    import { init } from 'https://unpkg.com/@waline/client/dist/waline.js';
+    import { init } from 'https://unpkg.com/@waline/client@3.3.0/dist/waline.js';
     window.WalineInit = init;
   </script>
-  <script src="assets/js/app.js"></script>
+  <script src="/assets/js/app.js"></script>
 </body>
 </html>
