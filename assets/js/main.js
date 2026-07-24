@@ -9,41 +9,6 @@ let isMobile = window.innerWidth < 840;
 let sidebarCollapsed = false;
 let sidebarOpenMobile = false;
 
-function refreshMDUIComponents() {
-  // 强制 MDUI Web Components 重新计算布局
-  // 移动端侧边栏从屏幕外滑入时，Lit 组件在隐藏状态下初始化导致 slot 分配失败
-  setTimeout(() => {
-    // 强制浏览器重排
-    document.body.offsetHeight;
-
-    // 1. 触发所有 MDUI 组件的 Lit 重新渲染
-    document.querySelectorAll('mdui-list-item, mdui-button-icon, mdui-icon, mdui-avatar').forEach(el => {
-      if (el.requestUpdate) el.requestUpdate();
-    });
-
-    // 2. mdui-list-item：通过 active 状态切换强制重渲染
-    document.querySelectorAll('mdui-list-item').forEach(item => {
-      const original = item.active;
-      item.active = !original;
-      requestAnimationFrame(() => {
-        item.active = original;
-      });
-    });
-
-    // 3. mdui-button-icon（主题切换按钮）：强制更新内部图标
-    document.querySelectorAll('.theme-wrap mdui-button-icon').forEach(btn => {
-      const icon = btn.querySelector('mdui-icon');
-      if (icon && icon.requestUpdate) icon.requestUpdate();
-      // 通过微变 class 触发重渲染
-      btn.classList.add('force-refresh');
-      requestAnimationFrame(() => btn.classList.remove('force-refresh'));
-    });
-
-    // 4. 派发 resize 事件
-    window.dispatchEvent(new Event('resize'));
-  }, 350);
-}
-
 function initSidebar() {
   const sidebar = $('sidebar');
   const main = $('main-content');
@@ -70,11 +35,6 @@ function initSidebar() {
       sidebarOpenMobile = !sidebarOpenMobile;
       sidebar.classList.toggle('mobile-open', sidebarOpenMobile);
       overlay.classList.toggle('active', sidebarOpenMobile);
-
-      // 修复：侧边栏打开后强制 MDUI 组件重排
-      if (sidebarOpenMobile) {
-        setTimeout(refreshMDUIComponents, 320);
-      }
     } else {
       sidebarCollapsed = !sidebarCollapsed;
       sidebar.classList.toggle('collapsed', sidebarCollapsed);
