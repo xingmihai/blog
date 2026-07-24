@@ -10,13 +10,18 @@ let sidebarCollapsed = false;
 let sidebarOpenMobile = false;
 
 function refreshMDUIComponents() {
-  // 双重保险：强制 MDUI Web Components 重新计算布局
-  // 方案1：left定位已解决根本问题，此函数作为兜底
+  // 强制 MDUI Web Components 重新计算布局
+  // 移动端侧边栏从屏幕外滑入时，Lit 组件在隐藏状态下初始化导致 slot 分配失败
   setTimeout(() => {
     // 强制浏览器重排
     document.body.offsetHeight;
 
-    // 遍历所有 mdui-list-item，通过属性微变触发 Lit 更新
+    // 1. 触发所有 MDUI 组件的 Lit 重新渲染
+    document.querySelectorAll('mdui-list-item, mdui-button-icon, mdui-icon, mdui-avatar').forEach(el => {
+      if (el.requestUpdate) el.requestUpdate();
+    });
+
+    // 2. mdui-list-item：通过 active 状态切换强制重渲染
     document.querySelectorAll('mdui-list-item').forEach(item => {
       const original = item.active;
       item.active = !original;
@@ -25,7 +30,16 @@ function refreshMDUIComponents() {
       });
     });
 
-    // 派发 resize 事件
+    // 3. mdui-button-icon（主题切换按钮）：强制更新内部图标
+    document.querySelectorAll('.theme-wrap mdui-button-icon').forEach(btn => {
+      const icon = btn.querySelector('mdui-icon');
+      if (icon && icon.requestUpdate) icon.requestUpdate();
+      // 通过微变 class 触发重渲染
+      btn.classList.add('force-refresh');
+      requestAnimationFrame(() => btn.classList.remove('force-refresh'));
+    });
+
+    // 4. 派发 resize 事件
     window.dispatchEvent(new Event('resize'));
   }, 350);
 }
