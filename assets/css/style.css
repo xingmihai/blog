@@ -47,6 +47,15 @@ body {
   border-radius: 0 2px 2px 0;
 }
 
+/* 回到顶部按钮 */
+.back-to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 85;
+  transition: transform 0.3s, opacity 0.3s;
+}
+
 /* 侧边栏 - 电脑端 */
 .sidebar {
   width: 280px;
@@ -192,6 +201,18 @@ body {
   }
 }
 
+/* 骨架屏 */
+.skeleton {
+  background: linear-gradient(90deg, rgba(var(--mdui-color-surface-variant), 0.6) 25%, rgba(var(--mdui-color-surface-variant), 0.3) 50%, rgba(var(--mdui-color-surface-variant), 0.6) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* 文章正文 */
 .post-content img,
 .post-content video {
@@ -269,7 +290,6 @@ pre:hover .code-copy-btn {
 /* 懒加载占位 */
 img[loading="lazy"] {
   background: rgb(var(--mdui-color-surface-variant));
-  /* min-height: 120px; */
 }
 
 /* 页脚 */
@@ -406,6 +426,11 @@ img[loading="lazy"] {
   .toc-sidebar.open {
     transform: translateX(0);
   }
+
+  .back-to-top {
+    right: 16px;
+    bottom: 16px;
+  }
 }
 
 /* 归档标签云 */
@@ -440,6 +465,60 @@ img[loading="lazy"] {
 .post-card:hover {
   transform: translateY(-2px);
   --mdui-elevation-level: 3;
+}
+
+/* 文章导航（上一篇/下一篇） */
+.post-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.post-nav-item {
+  display: block;
+  padding: 16px;
+  border-radius: var(--mdui-shape-corner-medium);
+  background: rgb(var(--mdui-color-surface-container-low));
+  border: 1px solid rgba(var(--mdui-color-outline-variant), 0.3);
+  text-decoration: none;
+  color: rgb(var(--mdui-color-on-surface));
+  transition: background 0.2s, transform 0.2s;
+}
+
+.post-nav-item:hover {
+  background: rgb(var(--mdui-color-surface-container));
+  transform: translateY(-2px);
+}
+
+.post-nav-item.prev { text-align: left; }
+.post-nav-item.next { text-align: right; }
+
+.post-nav-label {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.post-nav-item.prev .post-nav-label { justify-content: flex-start; }
+.post-nav-item.next .post-nav-label { justify-content: flex-end; }
+
+.post-nav-title {
+  font-weight: 500;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .post-nav {
+    grid-template-columns: 1fr;
+  }
+  .post-nav-item.next { text-align: left; }
+  .post-nav-item.next .post-nav-label { justify-content: flex-start; }
 }
 
 /* 404 */
@@ -510,7 +589,6 @@ img[loading="lazy"] {
   font-size: 14px;
 }
 
-
 /* PlantUML 图表容器 */
 .plantuml {
   margin: 1.5rem auto;
@@ -528,13 +606,11 @@ img[loading="lazy"] {
   display: inline-block;
 }
 
-/* PlantUML 暗色主题适配 */
 .mdui-theme-dark .plantuml {
   background: rgb(var(--mdui-color-surface-container-highest));
 }
 
 /* ==================== MDX 组件样式 ==================== */
-
 .mdx-alert {
   display: flex;
   gap: 12px;
@@ -685,4 +761,3 @@ img[loading="lazy"] {
   min-height: auto !important;
   vertical-align: middle;
 }
-/* ========================================== */

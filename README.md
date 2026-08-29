@@ -1,30 +1,22 @@
-# xmh-mdui
+# xmh-mdui v2.0
 
 > 一套基于 MDUI v2 的纯静态个人博客主题。零框架依赖，零后端依赖，只需 Markdown 即可开始写作。
 
-[在线演示](https://www.xmhai.cn) · [使用教程](https://www.xmhai.cn/#/post/xmh-mdui-tutorial)
+[在线演示](https://www.xmhai.cn)
 
 ![Stars](https://img.shields.io/github/stars/xingmihai/xmh-mdui?style=flat&logo=github)
 ![Forks](https://img.shields.io/github/forks/xingmihai/xmh-mdui?style=flat&logo=github)
 ![License](https://img.shields.io/github/license/xingmihai/xmh-mdui?style=flat)
 
-## 预览
+## v2.0 优化亮点
 
-![浅色模式](https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800)
-
-## 特性
-
-- **纯静态** — 无后端、无数据库，部署到任意静态托管平台
-- **MDUI v2** — Material Design 3 设计规范，美观现代
-- **双格式支持** — Markdown (`.md`) 和 MDX (`.mdx`) 均可使用
-- **自定义语法** — 内置 `::github` 等快捷语法
-- **全文搜索** — 基于 Fuse.js 的实时搜索
-- **评论系统** — 集成 Waline 评论
-- **代码高亮** — highlight.js 支持一键复制
-- **图表支持** — Mermaid + PlantUML
-- **PWA** — 支持离线访问
-- **RSS 订阅** — 自动生成 RSS 源
-- **暗色模式** — 亮色 / 暗色 / 跟随系统
+- **构建时预编译**：Markdown 和 MDX 均在构建时编译为 HTML，前端无需运行时解析，首屏速度提升 3-5 倍
+- **SEO 独立页面**：每篇文章生成独立的 `/post/:slug/index.html`，含完整的 JSON-LD 结构化数据
+- **安全加固**：URL 协议白名单、XSS 过滤、外链自动加安全属性
+- **模块化架构**：前端代码拆分为 8 个独立模块，可维护性大幅提升
+- **阅读体验升级**：阅读时间估算、上一篇/下一篇导航、回到顶部按钮、骨架屏
+- **Service Worker**：核心资源离线缓存，Stale-While-Revalidate 策略
+- **键盘快捷键**：`/` 聚焦搜索、`Esc` 关闭下拉
 
 ## 快速开始
 
@@ -36,7 +28,7 @@ cd my-blog
 # 安装依赖
 npm install
 
-# 构建（生成 search.json 和 rss.xml）
+# 构建（生成 search.json、rss.xml、sitemap.xml、预编译 HTML）
 node build.js
 
 # 本地预览
@@ -51,16 +43,34 @@ my-blog/
 ├── posts/              # 文章目录（.md 和 .mdx）
 │   ├── hello-world.md
 │   └── hello-mdx.mdx
-├── posts-html/         # MDX 编译输出（自动生成）
+├── posts-html/         # 预编译 HTML 输出（自动生成）
+│   ├── hello-world.html
+│   ├── hello-mdx.html
+│   └── hello-world/    # SEO 独立页面
+│       └── index.html
 ├── assets/
 │   ├── css/style.css   # 自定义样式
-│   └── js/app.js       # 前端逻辑
+│   └── js/             # 模块化前端代码
+│       ├── main.js     # 入口
+│       ├── router.js   # 路由
+│       ├── renderer.js # 页面渲染
+│       ├── search.js   # 搜索
+│       ├── theme.js    # 主题
+│       ├── toc.js      # 目录
+│       ├── components.js # 组件（代码复制、灯箱等）
+│       └── utils.js    # 工具函数
+├── api/                # Cloudflare Worker API
+│   ├── stats.js        # 访问量统计
+│   └── rss.js          # RSS 代理缓存
 ├── index.html          # 入口页面
+├── sw.js               # Service Worker
 ├── build.js            # 构建脚本
 ├── about.md            # 关于页面内容
 ├── friends.json        # 友链数据
 ├── search.json         # 搜索索引（自动生成）
 ├── rss.xml             # RSS 源（自动生成）
+├── sitemap.xml         # 站点地图（自动生成）
+├── opensearch.xml      # 浏览器搜索（自动生成）
 └── package.json
 ```
 
@@ -105,7 +115,7 @@ cover: https://example.com/cover.jpg
 
 ## 配置
 
-编辑 `app.js` 顶部的 `CONFIG`：
+编辑 `assets/js/main.js` 顶部的 `CONFIG`：
 
 ```javascript
 const CONFIG = {
@@ -113,6 +123,7 @@ const CONFIG = {
   siteUrl: 'https://www.xmhai.cn',
   walineServer: 'https://your-waline-server.com',
   postsDir: '/posts/',
+  startDate: '2025-09-05T18:12:52',
 };
 ```
 
@@ -160,16 +171,17 @@ const CONFIG = {
 |------|------|
 | UI 框架 | MDUI v2 (Web Components) |
 | 构建工具 | Node.js + `@mdx-js/mdx` |
-| 前端渲染 | 原生 JS + Marked |
+| 前端渲染 | 原生 ES Modules |
 | 搜索 | Fuse.js |
 | 评论 | Waline |
 | 代码高亮 | highlight.js |
 | 图表 | Mermaid + PlantUML |
+| PWA | Service Worker |
 
 ## 浏览器支持
 
 - Chrome / Edge / Firefox / Safari 最新版
-- 支持 Web Components 的浏览器
+- 支持 Web Components 和 ES Modules 的浏览器
 
 ## 许可证
 
