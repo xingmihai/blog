@@ -5,6 +5,7 @@ const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 const { jsx, jsxs, Fragment } = require('react/jsx-runtime');
 const { marked } = require('marked');
+const hljs = require('highlight.js');
 
 const POSTS_DIR = path.join(__dirname, 'posts');
 const OUTPUT_DIR = path.join(__dirname, 'posts-html');
@@ -131,6 +132,35 @@ function parseTableRow(line) {
   return withoutEnd.split('|').map(s => s.trim());
 }
 
+// ========== 构建时代码高亮（前端不再需要加载 highlight.js） ==========
+function decodeCodeEntities(s) {
+  return String(s)
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&');
+}
+
+function highlightCodeBlocks(html) {
+  return html.replace(
+    /<pre><code(?:\s+class(?:Name)?="([^"]*)")?>([\s\S]*?)<\/code><\/pre>/g,
+    (match, cls, code) => {
+      const langMatch = (cls || '').match(/language-([\w+#-]+)/);
+      const lang = langMatch ? langMatch[1] : '';
+      const raw = decodeCodeEntities(code);
+      try {
+        const out = lang && hljs.getLanguage(lang)
+          ? hljs.highlight(raw, { language: lang, ignoreIllegals: true }).value
+          : hljs.highlightAuto(raw).value;
+        return `<pre><code class="hljs language-${lang || 'plaintext'}">${out}</code></pre>`;
+      } catch (e) {
+        return match;
+      }
+    }
+  );
+}
+
 // ========== 安全：URL 协议白名单 ==========
 function isSafeUrl(href) {
   if (!href) return false;
@@ -207,9 +237,10 @@ function compileMDXToHtml(mdxBody) {
   });
 
   const MDXContent = result.default;
-  return renderToStaticMarkup(
+  const out = renderToStaticMarkup(
     React.createElement(MDXContent, { components: MDX_COMPONENTS })
   );
+  return highlightCodeBlocks(out);
 }
 
 // 编译 Markdown 为 HTML（新增：构建时预编译）
@@ -249,7 +280,50 @@ function compileMarkdownToHtml(mdBody) {
     }
   );
 
+  // 构建时代码高亮：前端无需再加载 highlight.js
+  html = highlightCodeBlocks(html);
+
   return html;
+}
+
+// ========== 首屏直出（SSG）：首页文章列表静态化进 index.html ==========
+function generateHomeHtml(posts) {
+  const fmtDate = (s) => {
+    if (!s) return '未知日期';
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return String(s).slice(0, 10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const cards = posts.slice(0, 20).map(p => `
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/${p.slug}'">
+            ${p.cover ? `<img src="${escapeHtml(p.cover)}" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="${escapeHtml(p.title)}">` : ''}
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">${escapeHtml(p.title)}</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              ${fmtDate(p.date)} · ${p.readTime} 分钟阅读 · ${(p.tags || []).map(t => `<mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=${encodeURIComponent(t)}'">${escapeHtml(t)}</mdui-chip>`).join('')}
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;">${escapeHtml(p.description || '')}</div>
+          </mdui-card>`).join('');
+
+  return `      <div class="mdui-typescale-headline-medium" style="margin-bottom:24px;">最新文章</div>
+      <div style="display:grid;gap:16px;">${cards}
+      </div>`;
+}
+
+function injectHomeSSR(homeHtml) {
+  const idxPath = path.join(__dirname, 'index.html');
+  let idx = fs.readFileSync(idxPath, 'utf-8');
+  const START = '<!--SSR:HOME:START-->';
+  const END = '<!--SSR:HOME:END-->';
+  const si = idx.indexOf(START);
+  const ei = idx.indexOf(END);
+  if (si < 0 || ei < 0) {
+    console.warn('⚠️  index.html 未找到 SSR 标记，跳过首屏直出');
+    return;
+  }
+  idx = idx.slice(0, si + START.length) + '\n' + homeHtml + '\n      ' + idx.slice(ei);
+  fs.writeFileSync(idxPath, idx);
+  console.log('✅ 首页首屏直出已注入 index.html');
 }
 
 // ========== 生成独立文章 HTML（SEO） ==========
@@ -470,6 +544,9 @@ ${sitemapUrls.map(u => `  <url>
 </OpenSearchDescription>`;
   fs.writeFileSync(path.join(__dirname, 'opensearch.xml'), opensearch);
   console.log('✅ opensearch.xml 生成完成');
+
+  // ========== 首屏直出（SSG） ==========
+  injectHomeSSR(generateHomeHtml(files));
 
   console.log(`📄 共 ${files.length} 篇文章（预编译: ${files.filter(f => f.format === 'html').length} 篇）`);
 }

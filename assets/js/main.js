@@ -49,23 +49,8 @@ function initSidebar() {
   });
 }
 
-async function handleRoute() {
-  const container = $('page-container');
-
-  if (location.pathname !== '/' && !location.hash) {
-    const { render404 } = await import('./renderer.js');
-    render404(container);
-    return;
-  }
-
-  const { handler, params } = parseRoute(location.hash);
-
-  container.style.opacity = '0';
-  container.style.transform = 'translateY(12px)';
-  await new Promise(r => setTimeout(r, 150));
-
-  await handler(container, params);
-
+// 路由收尾：导航高亮 + 过渡复位 + 移动端收起侧栏
+function finishRoute(container) {
   document.querySelectorAll('mdui-list-item').forEach(n => n.active = false);
   const base = (location.hash.replace('#', '') || '/').split('/')[1].split('?')[0];
   const navMap = { '': 'nav-home', 'archive': 'nav-archive', 'about': 'nav-about', 'friends': 'nav-friends' };
@@ -80,6 +65,42 @@ async function handleRoute() {
     $('sidebar-overlay').classList.remove('active');
     sidebarOpenMobile = false;
   }
+}
+
+let ssrUsed = false;
+
+async function handleRoute() {
+  const container = $('page-container');
+
+  if (location.pathname !== '/' && !location.hash) {
+    const { render404 } = await import('./renderer.js');
+    render404(container);
+    return;
+  }
+
+  // 首屏直出（SSG）复用：首次进入首页直接沿用构建好的静态 HTML，
+  // 跳过「骨架屏 → 重新渲染」的二次闪烁，让 LCP 立即生效
+  const isHome = !location.hash || location.hash === '#' || location.hash === '#/';
+  if (!ssrUsed && isHome && container.querySelector('.post-card')) {
+    ssrUsed = true;
+    container.style.opacity = '1';
+    container.style.transform = 'translateY(0)';
+    // 后台预热搜索索引，用户点开搜索时立即可用
+    import('./search.js').then(m => m.loadPosts()).catch(() => {});
+    finishRoute(container);
+    return;
+  }
+  ssrUsed = true;
+
+  const { handler, params } = parseRoute(location.hash);
+
+  container.style.opacity = '0';
+  container.style.transform = 'translateY(12px)';
+  await new Promise(r => setTimeout(r, 150));
+
+  await handler(container, params);
+
+  finishRoute(container);
   window.scrollTo(0, 0);
 }
 
