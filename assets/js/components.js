@@ -2,6 +2,38 @@ import { $ } from './utils.js';
 
 let zoomInstance = null;
 
+/* ==================== 按需加载基础设施 ====================
+   原则：首屏只下载必需资源。
+   mermaid(3.5MB) / waline(163K) / medium-zoom / plantuml /
+   highlight / marked 全部延迟到真正用到时才加载。
+   ========================================================= */
+
+const scriptCache = new Map();
+
+/** 动态加载 UMD 脚本（带缓存，同一脚本只加载一次） */
+export function loadScript(src) {
+  if (scriptCache.has(src)) return scriptCache.get(src);
+  const p = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.async = true;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('脚本加载失败: ' + src));
+    document.head.appendChild(s);
+  });
+  scriptCache.set(src, p);
+  return p;
+}
+
+export const VENDOR = {
+  mediumZoom: '/assets/vendor/medium-zoom.min.js',
+  plantuml: '/assets/vendor/plantuml-encoder.min.js',
+  highlight: '/assets/vendor/highlight.min.js',
+  marked: '/assets/vendor/marked.min.js',
+  mermaid: '/assets/vendor/mermaid.min.js',
+  waline: '/assets/vendor/waline.js',
+};
+
 /**
  * 初始化代码复制按钮
  * @param {HTMLElement} container
@@ -43,20 +75,25 @@ export function initCodeCopy(container) {
 }
 
 /**
- * 初始化图片灯箱
+ * 初始化图片灯箱（按需加载 medium-zoom）
  * @param {HTMLElement} container
  */
-export function initImageZoom(container) {
-  if (typeof mediumZoom === 'undefined') return;
+export async function initImageZoom(container) {
+  const imgs = container.querySelectorAll('img[data-zoomable]');
+  if (!imgs.length) return; // 无图片则不加载
 
-  if (zoomInstance) {
-    zoomInstance.detach();
+  try {
+    await loadScript(VENDOR.mediumZoom);
+    if (typeof mediumZoom === 'undefined') return;
+
+    if (zoomInstance) zoomInstance.detach();
+    zoomInstance = mediumZoom(imgs, {
+      background: 'rgba(var(--mdui-color-scrim), 0.9)',
+      margin: 24,
+    });
+  } catch (e) {
+    console.warn('medium-zoom 加载失败，跳过图片灯箱');
   }
-
-  zoomInstance = mediumZoom(container.querySelectorAll('img[data-zoomable]'), {
-    background: 'rgba(var(--mdui-color-scrim), 0.9)',
-    margin: 24,
-  });
 }
 
 /**
@@ -67,11 +104,7 @@ export function initBackToTop() {
   if (!btn) return;
 
   const toggle = () => {
-    if (window.scrollY > 400) {
-      btn.style.display = '';
-    } else {
-      btn.style.display = 'none';
-    }
+    btn.style.display = window.scrollY > 400 ? '' : 'none';
   };
 
   window.addEventListener('scroll', toggle, { passive: true });
@@ -107,31 +140,44 @@ export function initReadingProgress() {
   checkPage();
 }
 
-/**
- * 初始化 Mermaid 图表
- */
-export function initMermaid() {
-  if (typeof mermaid === 'undefined') return;
-  import('./theme.js').then(({ getMermaidTheme }) => {
+/* ==================== Mermaid（3.5MB，严格按需） ==================== */
+
+let mermaidPromise = null;
+
+function getMermaid() {
+  if (mermaidPromise) return mermaidPromise;
+  mermaidPromise = import(VENDOR.mermaid).then(async mod => {
+    const mermaid = mod.default || mod;
+    const { getMermaidTheme } = await import('./theme.js');
     mermaid.initialize({
       startOnLoad: false,
       theme: getMermaidTheme(),
       securityLevel: 'strict',
     });
+    return mermaid;
   });
+  return mermaidPromise;
 }
 
 /**
- * 渲染 Mermaid 图表
+ * 预热 Mermaid：首屏不加载，仅当首屏已存在图表时才预取
+ */
+export function initMermaid() {
+  if (document.querySelector('.mermaid')) {
+    getMermaid().catch(() => {});
+  }
+}
+
+/**
+ * 渲染 Mermaid 图表（有图表才下载 3.5MB）
  * @param {HTMLElement} container
  */
 export async function renderMermaid(container) {
-  if (typeof mermaid === 'undefined') return;
-
   const nodes = container.querySelectorAll('.mermaid:not([data-processed="true"])');
   if (!nodes.length) return;
 
   try {
+    const mermaid = await getMermaid();
     await mermaid.run({ nodes: Array.from(nodes) });
   } catch (e) {
     console.error('Mermaid 渲染失败:', e);
@@ -139,61 +185,93 @@ export async function renderMermaid(container) {
 }
 
 /**
- * 渲染 PlantUML 图表
+ * 渲染 PlantUML 图表（按需加载编码器）
  * @param {HTMLElement} container
  */
-export function renderPlantUML(container) {
-  if (typeof plantumlEncoder === 'undefined') return;
-  container.querySelectorAll('pre code.language-plantuml').forEach(code => {
-    const pre = code.parentElement;
-    const text = code.textContent;
-    try {
-      const encoded = plantumlEncoder.encode(text);
-      const img = document.createElement('img');
-      img.src = `https://www.plantuml.com/plantuml/svg/${encoded}`;
-      img.alt = 'PlantUML Diagram';
-      img.className = 'plantuml-img';
-      img.loading = 'lazy';
-      const wrapper = document.createElement('div');
-      wrapper.className = 'plantuml';
-      wrapper.appendChild(img);
-      pre.replaceWith(wrapper);
-    } catch (e) {
-      console.error('PlantUML 编码失败:', e);
-    }
-  });
+export async function renderPlantUML(container) {
+  const codes = container.querySelectorAll('pre code.language-plantuml');
+  if (!codes.length) return;
+
+  try {
+    await loadScript(VENDOR.plantuml);
+    if (typeof plantumlEncoder === 'undefined') return;
+
+    codes.forEach(code => {
+      const pre = code.parentElement;
+      const text = code.textContent;
+      try {
+        const encoded = plantumlEncoder.encode(text);
+        const img = document.createElement('img');
+        img.src = `https://www.plantuml.com/plantuml/svg/${encoded}`;
+        img.alt = 'PlantUML Diagram';
+        img.className = 'plantuml-img';
+        img.loading = 'lazy';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'plantuml';
+        wrapper.appendChild(img);
+        pre.replaceWith(wrapper);
+      } catch (e) {
+        console.error('PlantUML 编码失败:', e);
+      }
+    });
+  } catch (e) {
+    console.warn('plantuml-encoder 加载失败，跳过 UML 渲染');
+  }
+}
+
+/* ==================== Waline 评论（按需加载） ==================== */
+
+let walinePromise = null;
+
+function getWaline() {
+  if (walinePromise) return walinePromise;
+  walinePromise = import(VENDOR.waline).then(m => m.init || m.default);
+  return walinePromise;
 }
 
 /**
- * 初始化 Waline 评论
+ * 初始化 Waline 评论（进入文章页才加载）
  * @param {string} slug
  */
-export function initWaline(slug) {
-  if (!window.WalineInit) {
-    setTimeout(() => initWaline(slug), 100);
-    return;
+export async function initWaline(slug) {
+  const el = document.querySelector('#waline');
+  if (!el) return;
+
+  try {
+    const init = await getWaline();
+    init({
+      el: '#waline',
+      serverURL: 'https://vercel-waline.xmhai.cn',
+      path: `#/post/${slug}`,
+      dark: 'html.mdui-theme-dark',
+      lang: 'zh-CN',
+      pageview: true,
+    });
+  } catch (e) {
+    console.warn('Waline 加载失败，评论区不可用');
   }
-  window.WalineInit({
-    el: '#waline',
-    serverURL: 'https://vercel-waline.xmhai.cn',
-    path: `#/post/${slug}`,
-    dark: 'html.mdui-theme-dark',
-    lang: 'zh-CN',
-    pageview: true,
-  });
 }
 
 /**
- * 初始化代码高亮
+ * 代码高亮：构建时已完成，此处仅对未高亮的老内容兜底
  * @param {HTMLElement} container
  */
-export function initHighlight(container) {
-  if (!window.hljs) return;
-  container.querySelectorAll('pre code').forEach(block => {
-    if (block.classList.contains('language-mermaid')) return;
-    if (block.classList.contains('language-plantuml')) return;
-    hljs.highlightElement(block);
-  });
+export async function initHighlight(container) {
+  const need = Array.from(container.querySelectorAll('pre code')).filter(
+    b =>
+      !b.classList.contains('hljs') &&
+      !b.classList.contains('language-mermaid') &&
+      !b.classList.contains('language-plantuml')
+  );
+  if (!need.length) return;
+
+  try {
+    await loadScript(VENDOR.highlight);
+    if (!window.hljs) return;
+    need.forEach(block => window.hljs.highlightElement(block));
+  } catch (e) {
+    /* 高亮失败不影响阅读 */
+  }
 }
 
 /**

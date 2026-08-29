@@ -1,7 +1,7 @@
 import { $, escapeHtml, formatDate, parseFrontMatter, countWords, readingTime, updateMeta, isSafeUrl } from './utils.js';
 import { loadPosts } from './search.js';
 import { generateTOC } from './toc.js';
-import { initCodeCopy, initImageZoom, initHighlight, initLazyImages, renderMermaid, renderPlantUML, initWaline } from './components.js';
+import { initCodeCopy, initImageZoom, initHighlight, initLazyImages, renderMermaid, renderPlantUML, initWaline, loadScript, VENDOR } from './components.js';
 
 const CONFIG = {
   siteName: '星觅海的博客',
@@ -127,7 +127,11 @@ export async function renderPost(container, params) {
       words = countWords(content);
       readTime = readingTime(words);
 
-      if (typeof marked !== 'undefined') {
+      // marked 按需加载：预编译文章不走这里，仅老文章兜底时才下载
+      try {
+        await loadScript(VENDOR.marked);
+        const marked = window.marked;
+        if (!marked) throw new Error('marked 未加载');
         const renderer = new marked.Renderer();
         renderer.link = ({ href, title, text }) => {
           const hrefStr = String(href || '');
@@ -143,7 +147,7 @@ export async function renderPost(container, params) {
         };
         marked.use({ gfm: true, breaks: true, renderer, headerIds: true });
         htmlContent = marked.parse(withGithub);
-      } else {
+      } catch (e) {
         htmlContent = `<pre>${escapeHtml(withGithub)}</pre>`;
       }
 
@@ -302,7 +306,11 @@ export async function renderAbout(container) {
     const { frontMatter, content } = parseFrontMatter(md);
 
     let body = '';
-    if (typeof marked !== 'undefined') {
+    // marked 按需加载：进入关于页才下载，首屏不受影响
+    try {
+      await loadScript(VENDOR.marked);
+      const marked = window.marked;
+      if (!marked) throw new Error('marked 未加载');
       const renderer = new marked.Renderer();
       renderer.link = ({ href, title, text }) => {
         const hrefStr = String(href || '');
@@ -313,7 +321,7 @@ export async function renderAbout(container) {
       };
       marked.use({ gfm: true, breaks: true, renderer, headerIds: true });
       body = marked.parse(content);
-    } else {
+    } catch (e) {
       body = `<pre>${escapeHtml(content)}</pre>`;
     }
 

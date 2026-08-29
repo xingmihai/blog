@@ -1,4 +1,4 @@
-const CACHE_NAME = 'xmh-mdui-v1';
+const CACHE_NAME = 'xmh-mdui-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -12,6 +12,9 @@ const STATIC_ASSETS = [
   '/assets/js/renderer.js',
   '/assets/js/router.js',
   '/search.json',
+  '/assets/vendor/mdui.css',
+  '/assets/vendor/material-icons.css',
+  '/assets/vendor/fonts/material-icons.woff2',
 ];
 
 self.addEventListener('install', (e) => {
