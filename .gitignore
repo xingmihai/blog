@@ -1,0 +1,15 @@
+# 依赖
+node_modules/
+
+# 构建产物（由 node build.js 生成）
+posts-html/
+post/
+search.json
+rss.xml
+sitemap.xml
+opensearch.xml
+
+# 本地环境
+.DS_Store
+*.log
+.wrangler/

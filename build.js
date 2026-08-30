@@ -1,14 +1,31 @@
 const fs = require('fs');
 const path = require('path');
-const { compileSync } = require('@mdx-js/mdx');
-const React = require('react');
-const { renderToStaticMarkup } = require('react-dom/server');
-const { jsx, jsxs, Fragment } = require('react/jsx-runtime');
 const { marked } = require('marked');
 const hljs = require('highlight.js');
 
+// MDX 依赖是可选的：未安装时只跳过 .mdx 文章，不影响 Markdown 构建。
+// 避免「少装一个依赖 → 整站构建直接崩溃」。
+let MDX = null;
+try {
+  MDX = {
+    compileSync: require('@mdx-js/mdx').compileSync,
+    React: require('react'),
+    renderToStaticMarkup: require('react-dom/server').renderToStaticMarkup,
+    jsx: require('react/jsx-runtime').jsx,
+    jsxs: require('react/jsx-runtime').jsxs,
+    Fragment: require('react/jsx-runtime').Fragment,
+  };
+} catch (e) {
+  console.warn('⚠️  未检测到 MDX 依赖（@mdx-js/mdx / react / react-dom），将跳过 .mdx 文章');
+  console.warn('   执行 npm install 可启用 MDX 支持');
+}
+
 const POSTS_DIR = path.join(__dirname, 'posts');
 const OUTPUT_DIR = path.join(__dirname, 'posts-html');
+// SEO 独立页输出目录：直接落成 /post/<slug>/index.html，
+// 让 sitemap / canonical / og:url 里的 /post/<slug>/ 命中真实静态文件，
+// 不再依赖 _redirects 做重写（换平台部署也不会失效）。
+const OUTPUT_SEO_DIR = path.join(__dirname, 'post');
 const OUTPUT_RSS = path.join(__dirname, 'rss.xml');
 const OUTPUT_SEARCH = path.join(__dirname, 'search.json');
 const OUTPUT_SITEMAP = path.join(__dirname, 'sitemap.xml');
@@ -23,6 +40,19 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 }
 
 // ========== 工具函数 ==========
+// frontmatter 里可写 slug: my-post 自定义 URL，避免文件名是时间戳导致 URL 无语义
+const SAFE_SLUG = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
+function normalizeSlug(raw) {
+  if (typeof raw !== 'string') return '';
+  const v = raw.trim();
+  if (!v) return '';
+  if (!SAFE_SLUG.test(v)) {
+    console.warn(`⚠️  非法 slug「${v}」已忽略（仅允许字母、数字、- 和 _，且不能以 - 或 _ 开头）`);
+    return '';
+  }
+  return v;
+}
+
 function parseFrontMatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!match) return { frontMatter: {}, content };
@@ -203,26 +233,26 @@ function createMarkedRenderer() {
 const MDX_COMPONENTS = {
   Alert: ({ type = 'info', children }) => {
     const icons = { info: 'ℹ️', warning: '⚠️', success: '✅', error: '❌' };
-    return React.createElement('div', { className: `mdx-alert mdx-alert-${type}` },
-      React.createElement('span', { className: 'mdx-alert-icon' }, icons[type] || icons.info),
-      React.createElement('div', { className: 'mdx-alert-content' }, children)
+    return MDX.React.createElement('div', { className: `mdx-alert mdx-alert-${type}` },
+      MDX.React.createElement('span', { className: 'mdx-alert-icon' }, icons[type] || icons.info),
+      MDX.React.createElement('div', { className: 'mdx-alert-content' }, children)
     );
   },
   Card: ({ title, children }) =>
-    React.createElement('div', { className: 'mdx-card' },
-      title && React.createElement('div', { className: 'mdx-card-title' }, title),
-      React.createElement('div', { className: 'mdx-card-body' }, children)
+    MDX.React.createElement('div', { className: 'mdx-card' },
+      title && MDX.React.createElement('div', { className: 'mdx-card-title' }, title),
+      MDX.React.createElement('div', { className: 'mdx-card-body' }, children)
     ),
   Badge: ({ children, color = 'primary' }) =>
-    React.createElement('span', { className: `mdx-badge mdx-badge-${color}` }, children),
-  Columns: ({ children }) => React.createElement('div', { className: 'mdx-columns' }, children),
-  Column: ({ children }) => React.createElement('div', { className: 'mdx-column' }, children),
+    MDX.React.createElement('span', { className: `mdx-badge mdx-badge-${color}` }, children),
+  Columns: ({ children }) => MDX.React.createElement('div', { className: 'mdx-columns' }, children),
+  Column: ({ children }) => MDX.React.createElement('div', { className: 'mdx-column' }, children),
 };
 
 function compileMDXToHtml(mdxBody) {
   const processed = markdownTableToHtml(mdxBody);
 
-  const vfile = compileSync(processed, {
+  const vfile = MDX.compileSync(processed, {
     outputFormat: 'function-body',
     development: false,
   });
@@ -230,15 +260,15 @@ function compileMDXToHtml(mdxBody) {
 
   const run = new Function('_args', code);
   const result = run({
-    React,
-    jsx,
-    jsxs,
-    Fragment,
+    React: MDX.React,
+    jsx: MDX.jsx,
+    jsxs: MDX.jsxs,
+    Fragment: MDX.Fragment,
   });
 
   const MDXContent = result.default;
-  const out = renderToStaticMarkup(
-    React.createElement(MDXContent, { components: MDX_COMPONENTS })
+  const out = MDX.renderToStaticMarkup(
+    MDX.React.createElement(MDXContent, { components: MDX_COMPONENTS })
   );
   return highlightCodeBlocks(out);
 }
@@ -321,8 +351,12 @@ function injectHomeSSR(homeHtml) {
     console.warn('⚠️  index.html 未找到 SSR 标记，跳过首屏直出');
     return;
   }
-  idx = idx.slice(0, si + START.length) + '\n' + homeHtml + '\n      ' + idx.slice(ei);
-  fs.writeFileSync(idxPath, idx);
+  const nextHtml = idx.slice(0, si + START.length) + '\n' + homeHtml + '\n      ' + idx.slice(ei);
+  if (nextHtml === idx) {
+    console.log('✅ 首页首屏直出已是最新，跳过写入（源文件未改动）');
+    return;
+  }
+  fs.writeFileSync(idxPath, nextHtml);
   console.log('✅ 首页首屏直出已注入 index.html');
 }
 
@@ -386,30 +420,44 @@ function generatePostHtml(post, prev, next) {
 }
 
 // ========== 构建主函数 ==========
-function build() {
-  if (fs.existsSync(OUTPUT_DIR)) {
-    fs.readdirSync(OUTPUT_DIR).forEach(f => {
-      const p = path.join(OUTPUT_DIR, f);
-      if (fs.statSync(p).isDirectory()) {
-        fs.rmSync(p, { recursive: true });
-      } else {
-        fs.unlinkSync(p);
-      }
-    });
-  }
+function cleanDir(dir) {
+  if (!dir || !fs.existsSync(dir)) return;
+  fs.readdirSync(dir).forEach(f => {
+    const p = path.join(dir, f);
+    if (fs.statSync(p).isDirectory()) {
+      fs.rmSync(p, { recursive: true });
+    } else {
+      fs.unlinkSync(p);
+    }
+  });
+}
 
+function build() {
+  const t0 = Date.now();
+  cleanDir(OUTPUT_DIR);
+  cleanDir(OUTPUT_SEO_DIR);
+
+  const usedSlugs = new Set();
   const files = fs.readdirSync(POSTS_DIR)
     .filter(f => f.endsWith('.md') || f.endsWith('.mdx'))
     .map(f => {
       const raw = fs.readFileSync(path.join(POSTS_DIR, f), 'utf-8');
       const { frontMatter, content: body } = parseFrontMatter(raw);
-      const slug = f.replace(/\.(md|mdx)$/, '');
       const isMdx = f.endsWith('.mdx');
+      const fileSlug = f.replace(/\.(md|mdx)$/, '');
+      let slug = normalizeSlug(frontMatter.slug) || fileSlug;
+      if (usedSlugs.has(slug)) {
+        console.warn(`⚠️  slug 冲突：「${slug}」重复，已回退为文件名 ${fileSlug}`);
+        slug = fileSlug;
+      }
+      usedSlugs.add(slug);
 
       let compiledHtml = null;
       let plainText = '';
 
-      if (isMdx) {
+      if (isMdx && !MDX) {
+        console.warn(`⚠️  跳过 MDX（依赖未安装）: ${f}`);
+      } else if (isMdx) {
         try {
           compiledHtml = compileMDXToHtml(body);
           plainText = mdxToPlainText(body);
@@ -443,12 +491,14 @@ function build() {
 
       return {
         slug,
+        file: f,
         title: frontMatter.title || slug,
         date: frontMatter.date || new Date().toISOString().split('T')[0],
         tags: Array.isArray(frontMatter.tags) ? frontMatter.tags : [],
         description: frontMatter.description || '',
         cover: frontMatter.cover || '',
         format: compiledHtml ? 'html' : 'md',
+        htmlContent: compiledHtml || '',
         content: plainText.slice(0, 5000),
         words,
         readTime,
@@ -468,7 +518,7 @@ function build() {
   // 为每篇文章生成独立 SEO HTML
   files.forEach(p => {
     if (p.format === 'html') {
-      const postDir = path.join(OUTPUT_DIR, p.slug);
+      const postDir = path.join(OUTPUT_SEO_DIR, p.slug);
       if (!fs.existsSync(postDir)) fs.mkdirSync(postDir, { recursive: true });
       const nav = postMap[p.slug];
       const seoHtml = generatePostHtml(p, nav.prev, nav.next);
@@ -477,8 +527,11 @@ function build() {
   });
 
   // 写入增强版 search.json（包含阅读时间、字数）
-  fs.writeFileSync(OUTPUT_SEARCH, JSON.stringify(files, null, 2));
-  console.log('✅ search.json 生成完成');
+  // 剔除 htmlContent：正文由前端按需 fetch /posts-html/<slug>.html，
+  // 塞进索引只会白白放大体积，前端也用不到
+  const searchIndex = files.map(({ htmlContent, ...rest }) => rest);
+  fs.writeFileSync(OUTPUT_SEARCH, JSON.stringify(searchIndex, null, 2));
+  console.log(`✅ search.json 生成完成（${(fs.statSync(OUTPUT_SEARCH).size / 1024).toFixed(1)} KB）`);
 
   const now = new Date().toUTCString();
   const items = files.map(p => `
@@ -509,11 +562,9 @@ function build() {
   console.log('✅ rss.xml 生成完成');
 
   // ========== 生成 sitemap.xml ==========
+  // hash 路由（/#/archive 等）会被搜索引擎归一化到首页，无法独立收录，故不列入
   const sitemapUrls = [
     { loc: SITE_URL, lastmod: now, priority: '1.0' },
-    { loc: `${SITE_URL}/#/archive`, lastmod: now, priority: '0.8' },
-    { loc: `${SITE_URL}/#/about`, lastmod: now, priority: '0.8' },
-    { loc: `${SITE_URL}/#/friends`, lastmod: now, priority: '0.8' },
     ...files.map(p => ({
       loc: `${SITE_URL}/post/${p.slug}/`,
       lastmod: new Date(p.date).toISOString().split('T')[0],
@@ -540,7 +591,7 @@ ${sitemapUrls.map(u => `  <url>
   <Description>搜索 ${SITE_NAME}</Description>
   <InputEncoding>UTF-8</InputEncoding>
   <Image width="100" height="100" type="image/png">https://q1.qlogo.cn/g?b=qq&amp;nk=1498934815&amp;s=100</Image>
-  <Url type="text/html" method="get" template="${SITE_URL}/?search={searchTerms}"/>
+  <Url type="text/html" method="get" template="${SITE_URL}/#/?search={searchTerms}"/>
 </OpenSearchDescription>`;
   fs.writeFileSync(path.join(__dirname, 'opensearch.xml'), opensearch);
   console.log('✅ opensearch.xml 生成完成');
@@ -548,7 +599,9 @@ ${sitemapUrls.map(u => `  <url>
   // ========== 首屏直出（SSG） ==========
   injectHomeSSR(generateHomeHtml(files));
 
-  console.log(`📄 共 ${files.length} 篇文章（预编译: ${files.filter(f => f.format === 'html').length} 篇）`);
+  const skipped = files.filter(f => f.format !== 'html').length;
+  console.log(`📄 共 ${files.length} 篇文章（预编译: ${files.length - skipped} 篇${skipped ? `，未编译: ${skipped} 篇` : ''}）`);
+  console.log(`⏱️  构建完成，耗时 ${((Date.now() - t0) / 1000).toFixed(2)}s`);
 }
 
 build();

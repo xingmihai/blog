@@ -1,5 +1,17 @@
 {
   "version": 1,
-  "include": ["/*"],
-  "exclude": ["/assets/*", "/posts/*", "/posts-html/*", "/rss.xml", "/search.json", "/robots.txt", "/about.md", "/friends.json"]
+  "include": [
+    "/*"
+  ],
+  "exclude": [
+    "/assets/*",
+    "/posts/*",
+    "/posts-html/*",
+    "/rss.xml",
+    "/search.json",
+    "/robots.txt",
+    "/about.md",
+    "/friends.json",
+    "/post/*"
+  ]
 }

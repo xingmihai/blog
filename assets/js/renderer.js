@@ -38,20 +38,31 @@ export async function renderHome(container, params = {}) {
     const posts = await loadPosts();
     let filtered = posts;
 
-    if (params.tag) {
+    if (params.search) {
+      const { searchPosts } = await import('./search.js');
+      filtered = await searchPosts(params.search);
+    } else if (params.tag) {
       filtered = posts.filter(p => (p.tags || []).includes(params.tag));
     }
 
     let html = '<div class="mdui-typescale-headline-medium" style="margin-bottom:24px;">';
-    html += params.tag ? `标签「${escapeHtml(params.tag)}」的文章` : '最新文章';
+    if (params.search) {
+      html += `搜索「${escapeHtml(params.search)}」`;
+    } else if (params.tag) {
+      html += `标签「${escapeHtml(params.tag)}」的文章`;
+    } else {
+      html += '最新文章';
+    }
     html += '</div>';
 
-    if (params.tag) {
+    if (params.search) {
+      html += `<mdui-chip style="margin-bottom:16px;" onclick="location.hash='#/'">清除搜索</mdui-chip>`;
+    } else if (params.tag) {
       html += `<mdui-chip style="margin-bottom:16px;" onclick="location.hash='#/archive'">清除标签</mdui-chip>`;
     }
 
     if (!filtered.length) {
-      html += '<mdui-card style="padding:24px;text-align:center;">暂无文章</mdui-card>';
+      html += `<mdui-card style="padding:24px;text-align:center;">${params.search ? '未找到匹配的文章' : '暂无文章'}</mdui-card>`;
     } else {
       html += '<div style="display:grid;gap:16px;">';
       filtered.forEach(p => {
@@ -70,7 +81,11 @@ export async function renderHome(container, params = {}) {
       html += '</div>';
     }
     container.innerHTML = html;
-    updateMeta('首页', '星觅海的个人博客，分享技术文章和生活随笔');
+    if (params.search) {
+      updateMeta(`搜索「${params.search}」`, `${CONFIG.siteName} 中有关「${params.search}」的文章`);
+    } else {
+      updateMeta('首页', '星觅海的个人博客，分享技术文章和生活随笔');
+    }
 
   } catch (err) {
     console.error('首页加载失败:', err);
@@ -109,7 +124,8 @@ export async function renderPost(container, params) {
       words = postMeta.words || 0;
       readTime = postMeta.readTime || readingTime(words);
     } else {
-      const res = await fetch(`${CONFIG.postsDir}${slug}.md`);
+      const mdFile = (postMeta && postMeta.file) || `${slug}.md`;
+      const res = await fetch(`${CONFIG.postsDir}${mdFile}`);
       if (!res.ok) throw new Error('404');
       const md = await res.text();
       const parsed = parseFrontMatter(md);

@@ -1,0 +1,37 @@
+# Cloudflare Pages 部署配置
+# 这里的绑定对应 functions/api/stats.js 与 functions/api/rss.js 里用到的 env.DB / env.RATE_LIMIT / env.RSS_CACHE
+# 未配置这些绑定时：访问量接口会返回 error，友链 RSS 会退化为直连（无缓存）。
+
+name = "xmh-mdui-blog"
+compatibility_date = "2024-09-01"
+
+# Pages 项目请在控制台设置：构建命令 = node build.js，输出目录 = .
+# pages_build_output_dir 仅在你用 `wrangler pages deploy` 手动部署时生效
+pages_build_output_dir = "."
+
+# ---------- D1：访问量统计 ----------
+# 1. npx wrangler d1 create blog-stats
+# 2. npx wrangler d1 execute blog-stats --file=schema.sql
+# 3. 把下面的 database_id 换成第 1 步返回的 id
+[[d1_databases]]
+binding = "DB"
+database_name = "blog-stats"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# ---------- KV：统计限流 ----------
+# npx wrangler kv:namespace create RATE_LIMIT
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "REPLACE_WITH_YOUR_RATE_LIMIT_KV_ID"
+
+# ---------- KV：友链 RSS 缓存 ----------
+# npx wrangler kv:namespace create RSS_CACHE
+[[kv_namespaces]]
+binding = "RSS_CACHE"
+id = "REPLACE_WITH_YOUR_RSS_CACHE_KV_ID"
+
+# ---------- 可选：限制 RSS 代理可抓取的域名 ----------
+# 不设置时仅做协议与内网地址校验；设置后只有白名单内的域名可被代理。
+# 多个域名用英文逗号分隔，例如 "example.com,www.example.com"
+[vars]
+# ALLOWED_RSS_DOMAINS = "example.com"

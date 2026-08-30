@@ -137,6 +137,145 @@
     <div class="app-bar-spacer"></div>
     <div id="page-container" class="page-transition">
       <!--SSR:HOME:START-->
+      <div class="mdui-typescale-headline-medium" style="margin-bottom:24px;">最新文章</div>
+      <div style="display:grid;gap:16px;">
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/xmh-mdui-tutorial'">
+            <img src="https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1200" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="xmh-mdui 博客使用教程">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">xmh-mdui 博客使用教程</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-07-21 · 5 分钟阅读 · <mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E6%95%99%E7%A8%8B'">教程</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=MDUI'">MDUI</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E5%8D%9A%E5%AE%A2'">博客</mdui-chip>
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;">详细介绍如何使用 xmh-mdui 搭建个人博客，包括写作、自定义语法、部署等完整流程。</div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/MDX-article-tutorial'">
+            <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="MDX文章示例">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">MDX文章示例</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-07-20 · 2 分钟阅读 · <mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=mdx'">mdx</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E6%95%99%E7%A8%8B'">教程</mdui-chip>
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;">一篇展示 MDX 组件用法的示例文章，包含提示框、卡片和多栏布局</div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/markdown-tutorial'">
+            <img src="https://images.unsplash.com/photo-1455390582262-044cdead277a?w=1200" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="Markdown 使用教程">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">Markdown 使用教程</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-07-20 · 7 分钟阅读 · <mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=markdown'">markdown</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E6%95%99%E7%A8%8B'">教程</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E5%86%99%E4%BD%9C'">写作</mdui-chip>
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;">全面介绍本博客支持的 Markdown 语法，从基础排版到高级图表一应俱全</div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/mdui-component'">
+            <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="MDUI 组件拓展">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">MDUI 组件拓展</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-07-20 · 7 分钟阅读 · <mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=MDUI'">MDUI</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E6%95%99%E7%A8%8B'">教程</mdui-chip>
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;">本文展示了 MDUI v2 中各类组件的实际效果，包括按钮、卡片、输入框、列表、进度条、对话框等，方便快速查阅组件样式。</div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/mermaid-showcase'">
+            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="Mermaid 图表全展示">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">Mermaid 图表全展示</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-07-20 · 7 分钟阅读 · <mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=mermaid'">mermaid</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E6%95%99%E7%A8%8B'">教程</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E5%8F%AF%E8%A7%86%E5%8C%96'">可视化</mdui-chip>
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;">展示博客支持的所有 Mermaid 图表类型，从流程图到思维导图一应俱全</div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/plantuml-showcase'">
+            <img src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=1200" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="PlantUML 图表全展示">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">PlantUML 图表全展示</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-07-20 · 7 分钟阅读 · <mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=plantuml'">plantuml</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E6%95%99%E7%A8%8B'">教程</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=UML'">UML</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E5%8F%AF%E8%A7%86%E5%8C%96'">可视化</mdui-chip>
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;">展示博客支持的所有 PlantUML 图表类型，从 UML 到思维导图一应俱全</div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/202606211836'">
+            <img src="https://saves.xmhai.cn/raw/mmexport1782057423234.jpg" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="陪伴我三年的手机出现粉线了">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">陪伴我三年的手机出现粉线了</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-06-21 · 1 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/Ten-Year-Pact'">
+            <img src="assets/images/ten_year_promise.svg" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="十年之约">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">十年之约</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-06-14 · 2 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/202606132250'">
+            
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">没错，我的博客的评论没了</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-06-13 · 4 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/Cloudflare-R2'">
+            <img src="https://save.xmhai.cn/assets/homescreen.png" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="优雅的 Cloudflare R2 网盘文件库">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">优雅的 Cloudflare R2 网盘文件库</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2026-06-13 · 2 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/Cloudflare-preferred'">
+            <img src="https://dash.cloudflare.com/favicon-196x196.png" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="Cloudflare优选ip教程">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">Cloudflare优选ip教程</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2025-10-24 · 2 分钟阅读 · <mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=Cloudflare'">Cloudflare</mdui-chip><mdui-chip style="margin-right:4px;cursor:pointer;" onclick="event.stopPropagation();location.hash='/?tag=%E6%95%99%E7%A8%8B'">教程</mdui-chip>
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/TalkEase-chat'">
+            
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">TalkEase - 实时聊天</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2025-10-19 · 5 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/202509301932'">
+            
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">蓝奏云直链解析工具</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2025-09-30 · 7 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/202509140747'">
+            
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">用 Cloudflare Workers + R2 搭建免费的 Serverless 云存储系统</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2025-09-14 · 15 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/HTML5Space-Shooter'">
+            
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">一款HTML5太空射击游戏（开源）</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2025-09-12 · 3 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/InstantMail'">
+            <img src="https://wp-cdn.4ce.cn/v2/zsdjAvc.png" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="Instant Mail">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">Instant Mail</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2025-09-11 · 3 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+          <mdui-card class="post-card" style="padding:16px;cursor:pointer;" onclick="location.hash='#/post/202509101940'">
+            <img src="https://q1.qlogo.cn/g?b=qq&amp;nk=1498934815&amp;s=640" loading="lazy" style="width:100%;height:200px;object-fit:cover;border-radius:var(--mdui-shape-corner-medium);margin-bottom:12px;" alt="第一篇文章">
+            <div class="mdui-typescale-title-large" style="margin-bottom:8px;">第一篇文章</div>
+            <div class="mdui-typescale-body-small" style="opacity:0.7;margin-bottom:8px;">
+              2025-09-10 · 1 分钟阅读 · 
+            </div>
+            <div class="mdui-typescale-body-medium" style="opacity:0.85;"></div>
+          </mdui-card>
+      </div>
       <!--SSR:HOME:END-->
     </div>
     <footer class="footer">

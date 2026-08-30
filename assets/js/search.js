@@ -3,6 +3,17 @@ import { $, escapeHtml, formatDate, debounce } from './utils.js';
 let fuse = null;
 let postsCache = [];
 
+const FUSE_OPTIONS = {
+  keys: [
+    { name: 'title', weight: 0.4 },
+    { name: 'content', weight: 0.3 },
+    { name: 'tags', weight: 0.2 },
+    { name: 'description', weight: 0.1 }
+  ],
+  threshold: 0.35,
+  includeMatches: true,
+};
+
 /**
  * 加载文章数据
  * @returns {Promise<Array>}
@@ -20,6 +31,30 @@ export async function loadPosts() {
 }
 
 /**
+ * 按关键词检索文章，返回文章数组（供搜索结果页 /#/?search=xxx 复用）
+ * Fuse.js 尚未就绪时自动降级为字符串包含匹配，保证功能可用
+ * @param {string} query
+ * @param {number} limit
+ * @returns {Promise<Array>}
+ */
+export async function searchPosts(query, limit = 20) {
+  await loadPosts();
+  const q = String(query || '').trim();
+  if (!q) return postsCache;
+
+  if (typeof Fuse === 'undefined') {
+    const lower = q.toLowerCase();
+    return postsCache.filter(p =>
+      (p.title || '').toLowerCase().includes(lower) ||
+      (p.description || '').toLowerCase().includes(lower) ||
+      (p.content || '').toLowerCase().includes(lower)
+    );
+  }
+  if (!fuse) fuse = new Fuse(postsCache, FUSE_OPTIONS);
+  return fuse.search(q).slice(0, limit).map(r => r.item);
+}
+
+/**
  * 初始化搜索系统
  */
 export async function initSearch() {
@@ -31,16 +66,7 @@ export async function initSearch() {
   try {
     await loadPosts();
 
-    fuse = new Fuse(postsCache, {
-      keys: [
-        { name: 'title', weight: 0.4 },
-        { name: 'content', weight: 0.3 },
-        { name: 'tags', weight: 0.2 },
-        { name: 'description', weight: 0.1 }
-      ],
-      threshold: 0.35,
-      includeMatches: true,
-    });
+    fuse = new Fuse(postsCache, FUSE_OPTIONS);
 
     const input = $('search-input');
     const dropdown = $('search-dropdown');
@@ -74,6 +100,18 @@ export async function initSearch() {
           list.appendChild(item);
         });
       }
+      // 超过展示条数或用户想看全量时，可跳转到完整搜索结果页
+      if (results.length > 0) {
+        const more = document.createElement('div');
+        more.className = 'search-result-item search-result-more';
+        more.innerHTML = `<div class="search-result-title">查看全部结果 →</div>`;
+        more.addEventListener('click', () => {
+          location.hash = `#/?search=${encodeURIComponent(q)}`;
+          dropdown.style.display = 'none';
+        });
+        list.appendChild(more);
+      }
+
       dropdown.style.display = 'block';
     };
 
