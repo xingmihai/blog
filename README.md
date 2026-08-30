@@ -17,6 +17,8 @@
 - **阅读体验升级**：阅读时间估算、上一篇/下一篇导航、回到顶部按钮、骨架屏
 - **Service Worker**：核心资源离线缓存，Stale-While-Revalidate 策略
 - **键盘快捷键**：`/` 聚焦搜索、`Esc` 关闭下拉
+- **SEO 独立页**：每篇文章直接落成 `/post/<slug>/index.html`，无需 `_redirects` 即可被收录
+- **自定义 slug**：frontmatter 里写 `slug` 即可摆脱「时间戳 URL」
 
 ## 快速开始
 
@@ -43,10 +45,11 @@ my-blog/
 ├── posts/              # 文章目录（.md 和 .mdx）
 │   ├── hello-world.md
 │   └── hello-mdx.mdx
-├── posts-html/         # 预编译 HTML 输出（自动生成）
+├── posts-html/         # 预编译正文 HTML 输出（自动生成，前端 fetch 用）
 │   ├── hello-world.html
-│   ├── hello-mdx.html
-│   └── hello-world/    # SEO 独立页面
+│   └── hello-mdx.html
+├── post/               # SEO 独立页面（自动生成，可直接被搜索引擎收录）
+│   └── hello-world/
 │       └── index.html
 ├── assets/
 │   ├── css/style.css   # 自定义样式
@@ -59,9 +62,9 @@ my-blog/
 │       ├── toc.js      # 目录
 │       ├── components.js # 组件（代码复制、灯箱等）
 │       └── utils.js    # 工具函数
-├── api/                # Cloudflare Worker API
-│   ├── stats.js        # 访问量统计
-│   └── rss.js          # RSS 代理缓存
+├── functions/api/      # Cloudflare Pages Functions（API）
+│   ├── stats.js        # 访问量统计（D1 + KV 限流）
+│   └── rss.js          # 友链 RSS 代理缓存（KV）
 ├── index.html          # 入口页面
 ├── sw.js               # Service Worker
 ├── build.js            # 构建脚本
@@ -71,6 +74,8 @@ my-blog/
 ├── rss.xml             # RSS 源（自动生成）
 ├── sitemap.xml         # 站点地图（自动生成）
 ├── opensearch.xml      # 浏览器搜索（自动生成）
+├── schema.sql          # D1 建表语句
+├── wrangler.toml       # D1 / KV 绑定配置
 └── package.json
 ```
 
@@ -94,6 +99,19 @@ cover: https://example.com/cover.jpg
 
 写完后运行 `node build.js` 重新生成索引即可。
 
+### 自定义 URL（slug）
+
+默认用文件名作为 URL。文件名是时间戳时，可在 frontmatter 里写 `slug` 自定义：
+
+```markdown
+---
+title: 我的文章标题
+slug: my-first-post
+---
+```
+
+这样文章地址就是 `/post/my-first-post/`。`slug` 只允许字母、数字、`-`、`_`，重复时会自动回退为文件名。
+
 ### 自定义语法
 
 **GitHub 仓库卡片**：
@@ -115,7 +133,7 @@ cover: https://example.com/cover.jpg
 
 ## 配置
 
-编辑 `assets/js/main.js` 顶部的 `CONFIG`：
+编辑 `assets/js/renderer.js` 顶部的 `CONFIG`：
 
 ```javascript
 const CONFIG = {
@@ -126,6 +144,21 @@ const CONFIG = {
   startDate: '2025-09-05T18:12:52',
 };
 ```
+
+### 访问量统计
+
+`functions/api/stats.js` 依赖 Cloudflare D1 与 KV：
+
+1. `npx wrangler d1 create blog-stats`，把返回的 `database_id` 填进 `wrangler.toml`
+2. `npx wrangler d1 execute blog-stats --file=schema.sql` 建表
+3. `npx wrangler kv:namespace create RATE_LIMIT` 与 `npx wrangler kv:namespace create RSS_CACHE`，把 id 填进 `wrangler.toml`
+
+未配置时，页脚会显示「访问量统计暂不可用」，其余功能不受影响。
+
+### 友链 RSS
+
+`functions/api/rss.js` 会代服务器抓取友链 RSS，因此默认只放行公网地址，并拦截内网网段。
+在 `wrangler.toml` 的 `ALLOWED_RSS_DOMAINS` 里填写域名白名单可进一步收紧。
 
 ### 评论系统
 
@@ -158,8 +191,21 @@ const CONFIG = {
 
 ### GitHub Pages
 
+仓库已内置 `.github/workflows/deploy.yml`：推送到 `main` 后自动执行 `npm install && node build.js` 并发布产物。
+
 1. Fork 项目
-2. Settings → Pages → Source → main branch
+2. Settings → Pages → Source → **GitHub Actions**
+
+想手动发布则先在本地生成产物再提交（`.gitignore` 默认忽略产物目录）：
+
+```bash
+npm install && node build.js
+rm -rf node_modules
+git add -f posts-html post search.json rss.xml sitemap.xml opensearch.xml
+git commit -m "build" && git push
+```
+
+> 直接把源码目录丢到 Pages 上不会展示任何文章——`search.json` 与 `posts-html/` 都是构建时才生成的。
 
 ### Vercel / Netlify
 

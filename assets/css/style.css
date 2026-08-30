@@ -582,6 +582,21 @@ img[loading="lazy"] {
   opacity: 0.7;
 }
 
+/* 搜索下拉里的「查看全部结果」入口：用分隔线 + 主色与上方结果区分开 */
+.search-result-more {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(var(--mdui-color-outline-variant), 0.4);
+  border-radius: 0 0 var(--mdui-shape-corner-small) var(--mdui-shape-corner-small);
+}
+
+.search-result-more .search-result-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgb(var(--mdui-color-primary));
+  text-align: center;
+}
+
 .search-no-result {
   padding: 16px;
   text-align: center;

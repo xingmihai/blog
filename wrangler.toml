@@ -1,0 +1,48 @@
+# Cloudflare Pages 部署配置
+#
+# 默认配置开箱即用：不绑定 D1 / KV 也能部署成功。
+# 未绑定时的表现：访问量统计显示「暂不可用」，友链 RSS 功能正常但无缓存（稍慢）。
+# 想要完整功能，按下面注释里的步骤逐个开启即可。
+
+name = "xmh-mdui-blog"
+compatibility_date = "2024-09-01"
+
+# Pages 项目请在控制台设置：构建命令 = node build.js，输出目录 = .
+# pages_build_output_dir 仅在你用 `wrangler pages deploy` 手动部署时生效
+pages_build_output_dir = "."
+
+# ==========================================================
+# 以下三段默认全部注释，确保直接部署不会失败。
+# 需要某项功能时，删掉对应段落的注释符号并填入真实 ID。
+# ==========================================================
+
+# ---------- 访问量统计（D1）----------
+# 开启步骤：
+#   1. npx wrangler d1 create blog-stats
+#   2. npx wrangler d1 execute blog-stats --file=schema.sql
+#   3. 把第 1 步返回的 database_id 填到下面
+# 未开启：页脚显示「访问量统计暂不可用」，其余功能不受影响。
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "blog-stats"
+# database_id = "填入你的 D1 database_id"
+
+# ---------- 统计限流（KV）----------
+# 开启步骤：npx wrangler kv:namespace create RATE_LIMIT
+# 未开启：不做限流，同一 IP 重复刷新会计入多次。
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "填入你的 KV namespace id"
+
+# ---------- 友链 RSS 缓存（KV）----------
+# 开启步骤：npx wrangler kv:namespace create RSS_CACHE
+# 未开启：每次打开友链页都实时抓取对方 RSS，慢且可能失败。
+# [[kv_namespaces]]
+# binding = "RSS_CACHE"
+# id = "填入你的 KV namespace id"
+
+# ---------- 可选：限定 RSS 代理可抓取的域名 ----------
+# 不设置时只做协议与内网地址校验；设置后仅白名单域名可被代理。
+# 多个域名用英文逗号分隔，例如 "example.com,www.example.com"
+# [vars]
+# ALLOWED_RSS_DOMAINS = "example.com"

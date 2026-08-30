@@ -2,10 +2,21 @@
 const RATE_LIMIT_SECONDS = 300;
 const RATE_LIMIT_KV_PREFIX = 'rate_limit:stats:';
 
+// 「今日」按 Asia/Shanghai（UTC+8）划分。
+// 直接用 date('now') 是 UTC 口径，北京时间 00:00-08:00 会被算进前一天。
+const TODAY_EXPR = "date('now', '+8 hours')";
+
+// page 由客户端传入，限制长度与字符集，避免任意 key 被写进统计表
+const SAFE_PAGE = /^[a-zA-Z0-9_\-/]{1,64}$/;
+function safePage(raw) {
+  const v = String(raw || 'global');
+  return SAFE_PAGE.test(v) ? v : 'global';
+}
+
 export async function onRequestGet(context) {
   const { env, request } = context;
   const url = new URL(request.url);
-  const page = url.searchParams.get('page') || 'global';
+  const page = safePage(url.searchParams.get('page'));
 
   try {
     const totalRow = await env.DB.prepare(
@@ -13,7 +24,7 @@ export async function onRequestGet(context) {
     ).bind('global').first();
 
     const todayRow = await env.DB.prepare(
-      'SELECT views FROM daily_stats WHERE date = date("now")'
+      `SELECT views FROM daily_stats WHERE date = ${TODAY_EXPR}`
     ).first();
 
     let pageViews = null;
@@ -39,7 +50,7 @@ export async function onRequestPost(context) {
   let body = {};
   try { body = await request.json(); } catch (e) {}
 
-  const page = body.page || 'global';
+  const page = safePage(body.page);
   const clientIP = getClientIP(request);
 
   try {
@@ -52,7 +63,7 @@ export async function onRequestPost(context) {
       ).bind('global').first();
 
       const todayRow = await env.DB.prepare(
-        'SELECT views FROM daily_stats WHERE date = date("now")'
+        `SELECT views FROM daily_stats WHERE date = ${TODAY_EXPR}`
       ).first();
 
       let pageViews = null;
@@ -79,7 +90,7 @@ export async function onRequestPost(context) {
     `).run();
 
     await env.DB.prepare(`
-      INSERT INTO daily_stats (date, views) VALUES (date('now'), 1)
+      INSERT INTO daily_stats (date, views) VALUES (${TODAY_EXPR}, 1)
       ON CONFLICT(date) DO UPDATE SET 
         views = views + 1,
         updated_at = datetime('now')
