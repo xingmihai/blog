@@ -117,6 +117,9 @@ export async function updatePageviews(page = 'global') {
     }
 
     const res = await fetch(`/api/stats?page=${encodeURIComponent(page)}`);
+    // 未绑定 D1 时接口返回 500 JSON，这里要判 ok，
+    // 否则会把「接口不可用」显示成「总访问 0 次」，看着像真数据
+    if (!res.ok) throw new Error(`stats ${res.status}`);
     const data = await res.json();
 
     if (totalEl) totalEl.textContent = `总访问 ${data.total || 0} 次`;

@@ -74,14 +74,27 @@ URL 完全由文件名决定，5 篇文章的文件名是时间戳（如 `202509
 - 自定义 slug 的端到端链路（SEO 页生成 + 前端回退取原文）验证通过
 - 反复构建不再产生无意义的文件改动
 
-## 六、部署前需要你填的东西
+## 六、D1 / KV 绑定（可选）
 
-`wrangler.toml` 里有 3 个占位符要替换：
+`wrangler.toml` 里的三段绑定**默认全部注释**，这样直接部署一定能成功。
+未绑定时的表现：
 
+| 绑定 | 未开启的后果 |
+|------|--------------|
+| D1 `DB` | 页脚显示「访问量统计暂不可用」 |
+| KV `RATE_LIMIT` | 不做限流，同一 IP 重复刷新会重复计数 |
+| KV `RSS_CACHE` | 友链 RSS 每次实时抓取，慢且可能失败 |
+
+想开启哪一项，就删掉 `wrangler.toml` 里对应段落的注释并填入真实 ID：
+
+```bash
+# 访问量统计
+npx wrangler d1 create blog-stats
+npx wrangler d1 execute blog-stats --file=schema.sql
+
+# 限流与 RSS 缓存
+npx wrangler kv:namespace create RATE_LIMIT
+npx wrangler kv:namespace create RSS_CACHE
 ```
-REPLACE_WITH_YOUR_D1_DATABASE_ID
-REPLACE_WITH_YOUR_RATE_LIMIT_KV_ID
-REPLACE_WITH_YOUR_RSS_CACHE_KV_ID
-```
 
-获取方式见该文件内注释。未配置时访问量统计会显示不可用，友链 RSS 退化为无缓存直连，其余功能不受影响。
+> 注意：`binding` 的名字（`DB` / `RATE_LIMIT` / `RSS_CACHE`）必须完全一致，代码里是按这些名字读取的。
