@@ -107,13 +107,19 @@ export async function initSearch() {
 
     // 键盘快捷键：/ 聚焦搜索
     document.addEventListener('keydown', e => {
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+      const ae = document.activeElement;
+      const tag = ae && ae.tagName;
+      // contenteditable（如评论框）内输入同样不应被快捷键劫持
+      const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || (ae && ae.isContentEditable);
+
+      if (e.key === '/' && !isEditing) {
         e.preventDefault();
         input.focus();
       }
       if (e.key === 'Escape') {
         dropdown.style.display = 'none';
-        input.blur();
+        // 仅在搜索框自身聚焦时失焦，避免误伤评论框等其它输入区
+        if (ae === input) input.blur();
       }
     });
 

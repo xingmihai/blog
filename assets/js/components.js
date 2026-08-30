@@ -146,8 +146,11 @@ let mermaidPromise = null;
 
 function getMermaid() {
   if (mermaidPromise) return mermaidPromise;
-  mermaidPromise = import(VENDOR.mermaid).then(async mod => {
-    const mermaid = mod.default || mod;
+  // mermaid.min.js 是脚本格式（内部挂 globalThis.mermaid），并非 ES Module，
+  // 若用 import() 加载会返回空 namespace，导致 initialize 不存在 → 图表静默失败
+  mermaidPromise = loadScript(VENDOR.mermaid).then(async () => {
+    const mermaid = window.mermaid;
+    if (!mermaid) throw new Error('mermaid 未加载');
     const { getMermaidTheme } = await import('./theme.js');
     mermaid.initialize({
       startOnLoad: false,

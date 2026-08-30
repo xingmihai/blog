@@ -20,7 +20,15 @@ const STATIC_ASSETS = [
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      // 逐个添加并容错：cache.addAll 是原子操作，
+      // 任一资源缺失（如未构建生成的 search.json）都会让整个 SW 安装失败。
+      return Promise.all(
+        STATIC_ASSETS.map(url =>
+          cache.add(url).catch(() => {
+            /* 单个资源失败不影响整体安装，后续请求仍会走 SWR 缓存 */
+          })
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });

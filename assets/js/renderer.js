@@ -238,7 +238,20 @@ export async function renderPost(container, params) {
     initWaline(slug);
     updateMeta(frontMatter.title || slug, frontMatter.description || '');
   } catch (err) {
-    render404(container);
+    console.error('文章渲染失败:', err);
+    // 只有「文章确实不存在」才显示 404，网络/解析异常单独提示，便于重试
+    if (err && err.message === '404') {
+      render404(container);
+    } else {
+      container.innerHTML = `
+        <mdui-card style="padding:24px;text-align:center;">
+          <mdui-icon name="error_outline" style="font-size:48px;opacity:0.4;"></mdui-icon>
+          <div class="mdui-typescale-title-medium" style="margin-top:12px;">文章加载失败</div>
+          <div class="mdui-typescale-body-medium" style="opacity:0.7;margin-top:8px;">${escapeHtml(err && err.message || '未知错误')}</div>
+          <div style="margin-top:16px;"><mdui-button href="#/">返回首页</mdui-button></div>
+        </mdui-card>`;
+      updateMeta('加载失败', '');
+    }
   }
 }
 
@@ -383,8 +396,24 @@ export async function renderAbout(container) {
 
 // ==================== 友链页 ====================
 export async function renderFriends(container) {
-  const res = await fetch('/friends.json');
-  const friends = await res.json();
+  let friends;
+  try {
+    const res = await fetch('/friends.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    friends = await res.json();
+    if (!Array.isArray(friends)) throw new Error('friends.json 格式错误');
+  } catch (err) {
+    console.error('友链加载失败:', err);
+    container.innerHTML = `
+      <mdui-card style="padding:24px;text-align:center;">
+        <mdui-icon name="error_outline" style="font-size:48px;opacity:0.4;"></mdui-icon>
+        <div class="mdui-typescale-title-medium" style="margin-top:12px;">友链加载失败</div>
+        <div class="mdui-typescale-body-medium" style="opacity:0.7;margin-top:8px;">${escapeHtml(err.message)}</div>
+      </mdui-card>`;
+    updateMeta('朋友', '友情链接');
+    return;
+  }
+
   let html = '<div class="mdui-typescale-headline-medium" style="margin-bottom:24px;">朋友们</div>';
   html += '<div class="friends-grid">';
   friends.forEach(f => {
@@ -445,17 +474,33 @@ async function loadFriendRSS(f) {
   const rssContainer = $('friend-rss');
   if (!rssContainer) return;
 
+  // 未提供 RSS 的友链：直接给友好提示，不再发必然失败的请求
+  if (!f.rss) {
+    rssContainer.innerHTML = `
+      <mdui-card style="padding:16px;text-align:center;">
+        <mdui-icon name="rss_feed" style="font-size:32px;opacity:0.4;"></mdui-icon>
+        <div class="mdui-typescale-body-medium" style="margin-top:8px;">该站点未提供 RSS 订阅</div>
+        <div style="margin-top:12px;">
+          <a href="${escapeHtml(f.url || '#')}" target="_blank" rel="noopener">
+            <mdui-button variant="tonal">直接访问源站</mdui-button>
+          </a>
+        </div>
+      </mdui-card>`;
+    return;
+  }
+
   const cacheKey = `rss_cache_${f.name}`;
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    try {
+  // 缓存读取失败（隐私模式下 localStorage 可能抛错）不应影响主流程
+  try {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
       const data = JSON.parse(cached);
       if (Date.now() - data.ts < 10 * 60 * 1000) {
         renderRSSList(rssContainer, data.items);
         return;
       }
-    } catch {}
-  }
+    }
+  } catch (e) {}
 
   try {
     const rssRes = await fetch(`/api/rss?url=${encodeURIComponent(f.rss)}`, {
@@ -468,7 +513,10 @@ async function loadFriendRSS(f) {
       throw new Error(rssData.message || 'Invalid RSS');
     }
 
-    localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), items: rssData.items }));
+    // 缓存写入失败（配额满 / 隐私模式）不影响文章展示
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), items: rssData.items }));
+    } catch (e) {}
     renderRSSList(rssContainer, rssData.items);
   } catch (err) {
     if (!rssContainer) return;
@@ -484,7 +532,9 @@ function renderRSSList(container, items) {
   items.slice(0, 10).forEach(item => {
     const title = escapeHtml(item.title || '无标题').replace(/"/g, '&quot;');
     const date = formatDate(item.pubDate).replace(/"/g, '&quot;');
-    list += '<mdui-list-item rounded href="' + escapeHtml(item.link) + '" target="_blank" rel="noopener" headline="' + title + '" description="' + date + '"></mdui-list-item>';
+    // 第三方 RSS 内容不可信：链接需过协议白名单，阻断 javascript: / data: 等
+    const link = isSafeUrl(item.link) ? escapeHtml(item.link) : '#';
+    list += '<mdui-list-item rounded href="' + link + '" target="_blank" rel="noopener" headline="' + title + '" description="' + date + '"></mdui-list-item>';
   });
   list += '</mdui-list>';
   container.innerHTML = list;
