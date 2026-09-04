@@ -1,31 +1,3 @@
-// /api/rss?url= 可被外部调用，Worker 会代为发起请求，因此必须做 SSRF 防护：
-// 限制协议、拦截内网/保留网段，并支持用 ALLOWED_RSS_DOMAINS 锁定可抓取的域名白名单。
-function isAllowedFeedUrl(url, env) {
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
-
-  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-
-  const allowList = (env && env.ALLOWED_RSS_DOMAINS || '')
-    .split(',')
-    .map(s => s.trim().toLowerCase())
-    .filter(Boolean);
-  if (allowList.length) {
-    return allowList.some(d => host === d || host.endsWith('.' + d));
-  }
-
-  if (host === 'localhost' || host.endsWith('.localhost')) return false;
-  if (host === 'metadata.google.internal') return false;
-  if (/^127\./.test(host) || /^0\./.test(host)) return false;
-  if (/^169\.254\./.test(host)) return false;                        // link-local / 云元数据
-  if (/^10\./.test(host)) return false;                               // 私有网段
-  if (/^192\.168\./.test(host)) return false;
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
-  if (/^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host)) return false; // CGNAT
-  if (host === '::1' || host.startsWith('fc') || host.startsWith('fd')) return false;
-
-  return true;
-}
-
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -38,20 +10,14 @@ export async function onRequestGet(context) {
 
   let targetUrl;
   try {
-    targetUrl = new URL(feedUrl);
+    targetUrl = new URL(feedUrl).href;
   } catch {
     return jsonResponse({ status: 'error', message: 'Invalid URL' }, 400);
   }
 
-  if (!isAllowedFeedUrl(targetUrl, env)) {
-    return jsonResponse({ status: 'error', message: 'URL not allowed' }, 403);
-  }
-
-  const targetHref = targetUrl.href;
-
   const CACHE_TTL = 600;
   const STALE_TTL = 86400;
-  const cacheKey = `rss:v1:${targetHref}`;
+  const cacheKey = `rss:v1:${targetUrl}`;
 
   if (!forceRefresh && env.RSS_CACHE) {
     try {
@@ -66,7 +32,7 @@ export async function onRequestGet(context) {
         }
 
         if (age < STALE_TTL * 1000) {
-          refreshCache(context, targetHref, cacheKey, CACHE_TTL);
+          refreshCache(context, targetUrl, cacheKey, CACHE_TTL);
           return jsonResponse({ status: 'ok', cached: true, stale: true, ...data });
         }
       }
@@ -75,13 +41,13 @@ export async function onRequestGet(context) {
     }
   }
 
-  const result = await fetchAndParse(targetHref);
+  const result = await fetchAndParse(targetUrl);
 
   if (result.ok && env.RSS_CACHE) {
     try {
       await env.RSS_CACHE.put(cacheKey, JSON.stringify(result.data), {
         expirationTtl: STALE_TTL,
-        metadata: { ts: Date.now(), url: targetHref }
+        metadata: { ts: Date.now(), url: targetUrl }
       });
     } catch (e) {
       console.error('KV write error:', e);
@@ -126,11 +92,11 @@ async function fetchAndParse(targetUrl) {
 
 async function refreshCache(context, targetUrl, cacheKey, ttl) {
   try {
-    const result = await fetchAndParse(targetHref);
+    const result = await fetchAndParse(targetUrl);
     if (result.ok) {
       await context.env.RSS_CACHE.put(cacheKey, JSON.stringify(result.data), {
         expirationTtl: ttl * 6,
-        metadata: { ts: Date.now(), url: targetHref }
+        metadata: { ts: Date.now(), url: targetUrl }
       });
     }
   } catch (e) {
