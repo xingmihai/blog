@@ -5,7 +5,7 @@
 // 因此部署时只需配置好 Waline 服务端地址，无需任何数据库绑定。
 
 // Waline 服务端地址（唯一来源，renderer.js 的 CONFIG.walineServer 也读这里）
-export const WALINE_SERVER = 'https://waline.xmhai.cn';
+export const WALINE_SERVER = 'https://waline.eo.xmhai.cn';
 
 const LANG = 'zh-CN';
 const API_BASE = `${WALINE_SERVER.replace(/\/+$/, '')}/api/article`;
