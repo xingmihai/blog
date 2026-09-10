@@ -4,6 +4,8 @@ import { initSearch } from './search.js';
 import { initTOC, updateMobileState } from './toc.js';
 import { initReadingProgress, initBackToTop, initMermaid } from './components.js';
 import { parseRoute } from './router.js';
+import { loadPosts } from './search.js';
+import { postPath, fetchPageviews, incPageview, getPageview } from './stats.js';
 
 let isMobile = window.innerWidth < 840;
 let sidebarCollapsed = false;
@@ -104,32 +106,41 @@ async function handleRoute() {
   window.scrollTo(0, 0);
 }
 
-export async function updatePageviews(page = 'global') {
+/**
+ * 页脚总访问量 = 所有文章浏览量之和（数据源：Waline）
+ * 首页本身不计数，口径是「文章被阅读的次数」。
+ */
+export async function updatePageviews() {
   const totalEl = $('pageviews-total');
-  const todayEl = $('pageviews-today');
 
   try {
-    const payload = new Blob([JSON.stringify({ page })], { type: 'application/json' });
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon('/api/stats', payload);
-    } else {
-      fetch('/api/stats', { method: 'POST', body: payload, keepalive: true }).catch(() => {});
-    }
+    const posts = await loadPosts();
+    const paths = posts.map(p => postPath(p.slug)).filter(Boolean);
+    const { total } = await fetchPageviews(paths);
 
-    const res = await fetch(`/api/stats?page=${encodeURIComponent(page)}`);
-    // 未绑定 D1 时接口返回 500 JSON，这里要判 ok，
-    // 否则会把「接口不可用」显示成「总访问 0 次」，看着像真数据
-    if (!res.ok) throw new Error(`stats ${res.status}`);
-    const data = await res.json();
-
-    if (totalEl) totalEl.textContent = `总访问 ${data.total || 0} 次`;
-    if (todayEl) todayEl.textContent = `今日 ${data.today || 0}`;
-
-    return data;
+    if (totalEl) totalEl.textContent = `总访问 ${total} 次`;
+    return { total };
   } catch (err) {
+    // Waline 不可用（未配置 / 跨域 / 被墙）时给出明确提示，
+    // 而不是显示「总访问 0 次」这种看着像真数据的假数字
     if (totalEl) totalEl.textContent = '访问量统计暂不可用';
-    if (todayEl) todayEl.textContent = '';
-    return { total: 0, today: 0, pageViews: 0 };
+    return { total: 0 };
+  }
+}
+
+/**
+ * 文章页阅读数：先自增再取新值
+ * @param {string} slug
+ * @returns {Promise<number>} 当前浏览量，失败返回 null
+ */
+export async function updatePostViews(slug) {
+  const path = postPath(slug);
+  try {
+    await incPageview(path);
+    return await getPageview(path);
+  } catch (err) {
+    console.warn('阅读数获取失败:', err);
+    return null;
   }
 }
 

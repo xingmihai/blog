@@ -1,4 +1,5 @@
 import { $ } from './utils.js';
+import { WALINE_SERVER } from './stats.js';
 
 let zoomInstance = null;
 
@@ -244,11 +245,15 @@ export async function initWaline(slug) {
     const init = await getWaline();
     init({
       el: '#waline',
-      serverURL: 'https://vercel-waline.xmhai.cn',
+      serverURL: WALINE_SERVER,
+      // 评论仍按 #/post/<slug> 归档，保持与历史评论一致
       path: `#/post/${slug}`,
       dark: 'html.mdui-theme-dark',
       lang: 'zh-CN',
-      pageview: true,
+      // 关掉内置计数：Waline 会按上面 path（#/post/<slug>）再自增一次，
+      // 与 stats.js 按 /post/<slug>/ 的自增形成两套数据。
+      // 计数统一交给 stats.js，见 updatePostViews()
+      pageview: false,
     });
   } catch (e) {
     console.warn('Waline 加载失败，评论区不可用');

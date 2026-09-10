@@ -2,11 +2,13 @@ import { $, escapeHtml, formatDate, parseFrontMatter, countWords, readingTime, u
 import { loadPosts } from './search.js';
 import { generateTOC } from './toc.js';
 import { initCodeCopy, initImageZoom, initHighlight, initLazyImages, renderMermaid, renderPlantUML, initWaline, loadScript, VENDOR } from './components.js';
+// Waline 地址与计数接口共用同一份配置，避免两处各写一遍
+import { WALINE_SERVER } from './stats.js';
 
 const CONFIG = {
   siteName: '星觅海的博客',
   siteUrl: 'https://www.xmhai.cn',
-  walineServer: 'https://vercel-waline.xmhai.cn',
+  walineServer: WALINE_SERVER,
   postsDir: '/posts/',
   startDate: '2025-09-05T18:12:52',
 };
@@ -241,12 +243,12 @@ export async function renderPost(container, params) {
     renderMermaid(container);
     renderPlantUML(container);
 
-    // 上报阅读数
-    import('./main.js').then(({ updatePageviews }) => {
-      updatePageviews(`#post:${slug}`).then(data => {
+    // 上报阅读数（Waline 计数，失败时保留占位符不写入假数字）
+    import('./main.js').then(({ updatePostViews }) => {
+      updatePostViews(slug).then(views => {
         const viewsEl = $('post-views');
-        if (viewsEl && data.pageViews != null) {
-          viewsEl.textContent = `${data.pageViews} 次阅读`;
+        if (viewsEl && views != null) {
+          viewsEl.textContent = `${views} 次阅读`;
         }
       });
     });

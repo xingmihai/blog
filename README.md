@@ -61,9 +61,9 @@ my-blog/
 │       ├── theme.js    # 主题
 │       ├── toc.js      # 目录
 │       ├── components.js # 组件（代码复制、灯箱等）
+│       ├── stats.js    # 访问量统计（Waline 计数接口）
 │       └── utils.js    # 工具函数
 ├── functions/api/      # Cloudflare Pages Functions（API）
-│   ├── stats.js        # 访问量统计（D1 + KV 限流）
 │   └── rss.js          # 友链 RSS 代理缓存（KV）
 ├── index.html          # 入口页面
 ├── sw.js               # Service Worker
@@ -74,8 +74,7 @@ my-blog/
 ├── rss.xml             # RSS 源（自动生成）
 ├── sitemap.xml         # 站点地图（自动生成）
 ├── opensearch.xml      # 浏览器搜索（自动生成）
-├── schema.sql          # D1 建表语句
-├── wrangler.toml       # D1 / KV 绑定配置
+├── wrangler.toml       # KV 绑定配置（仅友链 RSS 缓存）
 └── package.json
 ```
 
@@ -147,13 +146,15 @@ const CONFIG = {
 
 ### 访问量统计
 
-`functions/api/stats.js` 依赖 Cloudflare D1 与 KV：
+统计走 Waline 的 `article` 计数接口（`type=time`），**不需要 D1 / KV**，配置好评论服务即可生效：
 
-1. `npx wrangler d1 create blog-stats`，把返回的 `database_id` 填进 `wrangler.toml`
-2. `npx wrangler d1 execute blog-stats --file=schema.sql` 建表
-3. `npx wrangler kv:namespace create RATE_LIMIT` 与 `npx wrangler kv:namespace create RSS_CACHE`，把 id 填进 `wrangler.toml`
+- 文章页：进入时该文章浏览量 +1，标题下方显示「N 次阅读」
+- 页脚：「总访问 N 次」= 全部文章浏览量之和
+- 计数 key 为 `/post/<slug>/`，与 SEO 独立页地址一致，换前端路由也不会丢数据
 
-未配置时，页脚会显示「访问量统计暂不可用」，其余功能不受影响。
+Waline 服务端地址在 `assets/js/stats.js` 顶部的 `WALINE_SERVER` 修改（`renderer.js` 的 `CONFIG.walineServer` 复用同一常量，改一处即可）。
+
+服务端不可用时，页脚会显示「访问量统计暂不可用」，其余功能不受影响。
 
 ### 友链 RSS
 
