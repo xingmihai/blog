@@ -1,9 +1,10 @@
-const CACHE_NAME = 'xmh-mdui-v2';
+const CACHE_NAME = 'xmh-mdui-v2.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/assets/css/style.css',
   '/assets/js/main.js',
+  '/assets/js/stats.js',
   '/assets/js/utils.js',
   '/assets/js/theme.js',
   '/assets/js/search.js',
@@ -48,6 +49,10 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(request.url);
 
   if (request.method !== 'GET' || !url.pathname.startsWith('/')) return;
+
+  // 跨域请求（Waline 计数 / 评论接口等）一律不接管：
+  // 浏览量查询必须每次拿实时值，被缓存后数字会一直不涨
+  if (url.origin !== self.location.origin) return;
 
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(
