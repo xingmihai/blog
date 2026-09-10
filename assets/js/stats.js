@@ -49,7 +49,12 @@ export async function fetchPageviews(paths) {
     if (!res.ok) throw new Error(`waline article ${res.status}`);
 
     const json = await res.json();
-    // Waline 正常返回 { errno: 0, data: [...] }；data 里缺失的 path 视为 0
+    // Waline 用 HTTP 200 承载业务错误（如 { errno: 1, errmsg }）。
+    // 不校验 errno 会把「查询失败」当成「0 次访问」，页脚显示假数据。
+    if (json?.errno !== 0) {
+      throw new Error(`waline article errno=${json?.errno} ${json?.errmsg || ''}`.trim());
+    }
+    // data 里缺失的 path 视为 0
     const rows = Array.isArray(json?.data) ? json.data : [];
     rows.forEach((row, idx) => {
       const n = Number(row?.time) || 0;
@@ -67,20 +72,44 @@ export async function getPageview(path) {
   return byPath[path] || 0;
 }
 
+// 并发去重：同一 path 的自增请求进行中时，后续调用复用同一个 Promise。
+// 「读 sessionStorage → 发请求 → 写 sessionStorage」不是原子操作，
+// 两个并发调用都会先读到未计数，从而各发一次自增请求。
+const inflightIncs = new Map();
+
 /**
  * 浏览量 +1。同一会话重复调用不会重复计数。
- * @returns {Promise<boolean>} 是否真的自增了
+ * @returns {Promise<boolean>} 是否真的自增了（复用他人请求时返回 false）
  */
 export async function incPageview(path) {
   if (alreadyCounted(path)) return false;
 
-  const res = await fetch(`${API_BASE}?lang=${LANG}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path, type: ['time'], action: 'inc' }),
-  });
-  if (!res.ok) throw new Error(`waline article inc ${res.status}`);
+  // 已有同 path 的请求在进行中：等它结束即可，本次不再自增
+  if (inflightIncs.has(path)) {
+    await inflightIncs.get(path).catch(() => {});
+    return false;
+  }
 
-  markCounted(path);
-  return true;
+  const task = (async () => {
+    const res = await fetch(`${API_BASE}?lang=${LANG}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path, type: ['time'], action: 'inc' }),
+    });
+    if (!res.ok) throw new Error(`waline article inc ${res.status}`);
+
+    const json = await res.json();
+    if (json?.errno !== 0) {
+      throw new Error(`waline article inc errno=${json?.errno} ${json?.errmsg || ''}`.trim());
+    }
+    markCounted(path);
+  })();
+
+  inflightIncs.set(path, task);
+  try {
+    await task;
+    return true;
+  } finally {
+    inflightIncs.delete(path);
+  }
 }
