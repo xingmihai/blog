@@ -10,6 +10,21 @@ export const WALINE_SERVER = 'https://waline.eo.xmhai.cn';
 const LANG = 'zh-CN';
 const API_BASE = `${WALINE_SERVER.replace(/\/+$/, '')}/api/article`;
 
+// 请求超时：网络挂起或服务端无响应时不要让页面一直停在占位符。
+// 自增用较短超时——它失败只影响计数 +1，不阻碍展示，没必要让页面等太久。
+const TIMEOUT_GET = 8000;
+const TIMEOUT_POST = 5000;
+
+async function request(url, options = {}, timeout = TIMEOUT_GET) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // 文章页的计数 key：与 SEO 独立页 /post/<slug>/ 保持一致，
 // 这样以后换前端路由（hash → history）计数也不会丢。
 export function postPath(slug) {
@@ -45,7 +60,7 @@ export async function fetchPageviews(paths) {
   for (let i = 0; i < list.length; i += BATCH) {
     const batch = list.slice(i, i + BATCH);
     const url = `${API_BASE}?path=${encodeURIComponent(batch.join(','))}&type=time&lang=${LANG}`;
-    const res = await fetch(url);
+    const res = await request(url);
     if (!res.ok) throw new Error(`waline article ${res.status}`);
 
     const json = await res.json();
@@ -91,11 +106,11 @@ export async function incPageview(path) {
   }
 
   const task = (async () => {
-    const res = await fetch(`${API_BASE}?lang=${LANG}`, {
+    const res = await request(`${API_BASE}?lang=${LANG}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path, type: ['time'], action: 'inc' }),
-    });
+    }, TIMEOUT_POST);
     if (!res.ok) throw new Error(`waline article inc ${res.status}`);
 
     const json = await res.json();

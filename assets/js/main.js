@@ -130,16 +130,21 @@ export async function updatePageviews() {
 
 /**
  * 文章页阅读数：先自增再取新值
+ * 自增与查询相互独立——自增失败（跨域预检被拦、服务端限流等）不应连累展示，
+ * 否则查询即使正常，页面也会一直停在占位符 "--"。
  * @param {string} slug
- * @returns {Promise<number>} 当前浏览量，失败返回 null
+ * @returns {Promise<number>} 当前浏览量，查询失败返回 null
  */
 export async function updatePostViews(slug) {
   const path = postPath(slug);
+
+  // 自增失败只记日志，不阻断后续查询
+  await incPageview(path).catch(err => console.warn('阅读数自增失败（不影响展示）:', err));
+
   try {
-    await incPageview(path);
     return await getPageview(path);
   } catch (err) {
-    console.warn('阅读数获取失败:', err);
+    console.warn('阅读数查询失败:', err);
     return null;
   }
 }
