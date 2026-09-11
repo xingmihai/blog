@@ -1,7 +1,9 @@
 // ========== 访问量统计（基于 Waline 的 article 计数接口）==========
 // 复用评论服务已有的计数能力，不再依赖 D1 / KV：
 //   GET  /api/article?path=a,b&type=time  查询浏览量
-//   POST /api/article?lang=xx             body {path, type:['time'], action:'inc'} 自增
+//   POST /api/article?lang=xx             body {path, type:'time', action:'inc'} 自增
+//                                               ↑ type 必须是字符串，不能是数组。
+// 传数组时服务端静默跳过自增但仍返回 errno: 0，表现为「不报错、计数永远不涨」。
 // 因此部署时只需配置好 Waline 服务端地址，无需任何数据库绑定。
 
 // Waline 服务端地址（唯一来源，renderer.js 的 CONFIG.walineServer 也读这里）
@@ -55,9 +57,16 @@ export function postPath(slug) {
 
 // 排查「计数不涨」时，在地址后加 ?pvdebug=1 可跳过会话去重并输出详细日志。
 // 否则一次会话内只自增一次，刷新页面不会再发请求，不利于反复验证。
+//
+// search 与 hash 必须分开匹配：本站是 hash 路由，
+// 「/?pvdebug=1#/post/hello/」拼成一个字符串后是 "?pvdebug=1#/post/hello/"，
+// pvdebug 后面紧跟 #，用 (?:&|$) 收尾会匹配失败——
+// 结果最自然的写法不生效，只有塞进 hash 内部才生效，与直觉相反。
 const DEBUG =
   typeof location !== 'undefined' &&
-  /[?&]pvdebug=1(?:&|$)/.test(String(location.search) + String(location.hash));
+  [String(location.search), String(location.hash)].some(
+    s => /(?:^|[?&])pvdebug=1(?:&|$)/.test(s)
+  );
 
 // 同一浏览器会话内同一 path 只自增一次，
 // 避免刷新页面把计数刷上去（后端 Waline 本身不去重）
