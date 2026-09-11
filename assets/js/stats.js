@@ -15,13 +15,30 @@ const API_BASE = `${WALINE_SERVER.replace(/\/+$/, '')}/api/article`;
 const TIMEOUT_GET = 8000;
 const TIMEOUT_POST = 5000;
 
+// 超时必须覆盖「响应体读取」而不只是「响应头」：
+// 服务端完全可能先回 200 头、然后卡住不吐 body，
+// 此时只给 fetch 加超时会在拿到头之后被清除，后续 res.json() 无限挂起。
+// 这里在同一个 signal 下读完 body 再清除计时器。
 async function request(url, options = {}, timeout = TIMEOUT_GET) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   try {
-    return await fetch(url, { ...options, signal: ctrl.signal });
+    const res = await fetch(url, { ...options, signal: ctrl.signal });
+    // res.text() 与 fetch 共用 signal：body 卡住时 abort 会让它一起抛错
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, text };
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// 统一解析：响应不是合法 JSON（如网关返回的 HTML 错误页）时给出可读错误
+function parseJson({ ok, status, text }) {
+  if (!ok) throw new Error(`waline article ${status}`);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('waline article: 响应不是合法 JSON');
   }
 }
 
@@ -60,10 +77,7 @@ export async function fetchPageviews(paths) {
   for (let i = 0; i < list.length; i += BATCH) {
     const batch = list.slice(i, i + BATCH);
     const url = `${API_BASE}?path=${encodeURIComponent(batch.join(','))}&type=time&lang=${LANG}`;
-    const res = await request(url);
-    if (!res.ok) throw new Error(`waline article ${res.status}`);
-
-    const json = await res.json();
+    const json = parseJson(await request(url));
     // Waline 用 HTTP 200 承载业务错误（如 { errno: 1, errmsg }）。
     // 不校验 errno 会把「查询失败」当成「0 次访问」，页脚显示假数据。
     if (json?.errno !== 0) {
@@ -106,14 +120,11 @@ export async function incPageview(path) {
   }
 
   const task = (async () => {
-    const res = await request(`${API_BASE}?lang=${LANG}`, {
+    const json = parseJson(await request(`${API_BASE}?lang=${LANG}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path, type: ['time'], action: 'inc' }),
-    }, TIMEOUT_POST);
-    if (!res.ok) throw new Error(`waline article inc ${res.status}`);
-
-    const json = await res.json();
+    }, TIMEOUT_POST));
     if (json?.errno !== 0) {
       throw new Error(`waline article inc errno=${json?.errno} ${json?.errmsg || ''}`.trim());
     }
