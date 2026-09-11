@@ -1,29 +1,29 @@
 # Cloudflare Pages 部署配置
 #
 # 访问量统计已改用 Waline 的计数接口，不再需要 D1。
-# 下面只剩友链 RSS 缓存（KV）一项可选绑定，不填也能部署成功。
+# 当前唯一绑定是友链 RSS 缓存（KV）。
 
 name = "xmh-mdui-blog"
 compatibility_date = "2024-09-01"
 
 # Pages 项目请在控制台设置：构建命令 = node build.js，输出目录 = .
-# pages_build_output_dir 仅在你用 `wrangler pages deploy` 手动部署时生效
+# 注意：加了 pages_build_output_dir 后，本文件即成为项目配置的 source of truth，
+# 部署后 Cloudflare 控制台里这些字段只能查看、不能编辑。
 pages_build_output_dir = "."
 
-# ==========================================================
-# 以下绑定默认注释，确保直接部署不会失败。
-# 需要某项功能时，删掉对应段落的注释符号并填入真实 ID。
-# ==========================================================
-
 # ---------- 友链 RSS 缓存（KV）----------
-# 开启步骤：npx wrangler kv:namespace create RSS_CACHE
-# 未开启：每次打开友链页都实时抓取对方 RSS，慢且可能失败。
-# [[kv_namespaces]]
-# binding = "RSS_CACHE"
-# id = "填入你的 KV namespace id"
+# binding 名必须是 RSS_CACHE：functions/api/rss.js 里通过 env.RSS_CACHE 读取。
+# 未绑定时接口仍可用，只是每次都实时抓取对方 RSS，慢且源站挂了就失败。
+[[kv_namespaces]]
+binding = "RSS_CACHE"
+id = "e8c1996e2bd444e696281fe2c8df79b1"
 
-# ---------- 可选：限定 RSS 代理可抓取的域名 ----------
-# 不设置时只做协议与内网地址校验；设置后仅白名单域名可被代理。
-# 多个域名用英文逗号分隔，例如 "example.com,www.example.com"
+# 预览部署默认复用上面这个 namespace（读写的是同一份缓存数据）。
+# 若希望预览环境隔离，创建一个独立 namespace 并在此填 preview_id：
+# preview_id = "填入预览专用的 namespace id"
+
+# ---------- 待实现：限定 RSS 代理可抓取的域名 ----------
+# 注意：functions/api/rss.js 目前并未读取这个变量，配了也不会生效。
+# 需要时得先在 rss.js 里加上白名单判断，再取消下面的注释。
 # [vars]
-# ALLOWED_RSS_DOMAINS = "example.com"
+# ALLOWED_RSS_DOMAINS = "example.com,www.example.com"
