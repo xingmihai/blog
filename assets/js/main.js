@@ -129,17 +129,24 @@ export async function updatePageviews() {
 }
 
 /**
- * 文章页阅读数：先自增再取新值
+ * 文章页阅读数：自增与查询并行，互不影响
+ *
+ * 自增（POST）不能挡在查询（GET）前面：POST 带 Content-Type 会触发 CORS 预检，
+ * 是最容易失败的一环；await 它会让本可成功的查询被拖到超时，页面一直停在 "--"。
+ * 因此这里 fire-and-forget 发起自增，立即开始查询。
  * @param {string} slug
- * @returns {Promise<number>} 当前浏览量，失败返回 null
+ * @returns {Promise<number|null>} 当前浏览量，查询失败返回 null
  */
 export async function updatePostViews(slug) {
   const path = postPath(slug);
+
+  // 不 await：自增成败都不影响展示，失败只记日志
+  incPageview(path).catch(err => console.warn('阅读数自增失败（不影响展示）:', err));
+
   try {
-    await incPageview(path);
     return await getPageview(path);
   } catch (err) {
-    console.warn('阅读数获取失败:', err);
+    console.warn('阅读数查询失败:', err);
     return null;
   }
 }
