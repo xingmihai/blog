@@ -32,9 +32,14 @@ async function request(url, options = {}, timeout = TIMEOUT_GET) {
   }
 }
 
-// 统一解析：响应不是合法 JSON（如网关返回的 HTML 错误页）时给出可读错误
+// 统一解析：响应不是合法 JSON（如网关返回的 HTML 错误页）时给出可读错误。
+// HTTP 失败时带上响应体前 200 字符——Waline 常在 4xx 的 body 里说明真实原因
+// （如「path 不合法」「未开启计数」），只报状态码很难定位。
 function parseJson({ ok, status, text }) {
-  if (!ok) throw new Error(`waline article ${status}`);
+  if (!ok) {
+    const detail = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    throw new Error(`waline article ${status}${detail ? ` - ${detail}` : ''}`);
+  }
   try {
     return JSON.parse(text);
   } catch {
@@ -47,6 +52,12 @@ function parseJson({ ok, status, text }) {
 export function postPath(slug) {
   return `/post/${slug}/`;
 }
+
+// 排查「计数不涨」时，在地址后加 ?pvdebug=1 可跳过会话去重并输出详细日志。
+// 否则一次会话内只自增一次，刷新页面不会再发请求，不利于反复验证。
+const DEBUG =
+  typeof location !== 'undefined' &&
+  /[?&]pvdebug=1(?:&|$)/.test(String(location.search) + String(location.hash));
 
 // 同一浏览器会话内同一 path 只自增一次，
 // 避免刷新页面把计数刷上去（后端 Waline 本身不去重）
@@ -111,7 +122,7 @@ const inflightIncs = new Map();
  * @returns {Promise<boolean>} 是否真的自增了（复用他人请求时返回 false）
  */
 export async function incPageview(path) {
-  if (alreadyCounted(path)) return false;
+  if (!DEBUG && alreadyCounted(path)) return false;
 
   // 已有同 path 的请求在进行中：等它结束即可，本次不再自增
   if (inflightIncs.has(path)) {
@@ -120,10 +131,14 @@ export async function incPageview(path) {
   }
 
   const task = (async () => {
+    // type 必须是字符串 "time"，不能是 ["time"]。
+    // 官方客户端（waline.js 的 updatePageview）传的就是字符串；
+    // 传数组时服务端判断不成立，会静默跳过自增但仍返回 errno: 0，
+    // 表现为「不报错、计数也永远不涨」。
     const json = parseJson(await request(`${API_BASE}?lang=${LANG}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path, type: ['time'], action: 'inc' }),
+      body: JSON.stringify({ path, type: 'time', action: 'inc' }),
     }, TIMEOUT_POST));
     if (json?.errno !== 0) {
       throw new Error(`waline article inc errno=${json?.errno} ${json?.errmsg || ''}`.trim());
@@ -134,6 +149,7 @@ export async function incPageview(path) {
   inflightIncs.set(path, task);
   try {
     await task;
+    if (DEBUG) console.log(`[pv] 自增成功 ${path}`);
     return true;
   } finally {
     inflightIncs.delete(path);
