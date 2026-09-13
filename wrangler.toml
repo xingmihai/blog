@@ -1,7 +1,9 @@
 # Cloudflare Pages 部署配置
 #
-# 访问量统计已改用 Waline 的计数接口，不再需要 D1。
-# 当前唯一绑定是友链 RSS 缓存（KV）。
+# 仓库已无 Cloudflare Pages Functions：
+#   - 访问量统计走 Waline 计数接口
+#   - 友链 RSS 由 GitHub Actions 定时抓取，生成静态 friends-rss.json
+# 因此不需要任何 D1 / KV 绑定，本文件只保留构建相关配置。
 
 name = "xmh-mdui-blog"
 compatibility_date = "2024-09-01"
@@ -10,20 +12,3 @@ compatibility_date = "2024-09-01"
 # 注意：加了 pages_build_output_dir 后，本文件即成为项目配置的 source of truth，
 # 部署后 Cloudflare 控制台里这些字段只能查看、不能编辑。
 pages_build_output_dir = "."
-
-# ---------- 友链 RSS 缓存（KV）----------
-# binding 名必须是 RSS_CACHE：functions/api/rss.js 里通过 env.RSS_CACHE 读取。
-# 未绑定时接口仍可用，只是每次都实时抓取对方 RSS，慢且源站挂了就失败。
-[[kv_namespaces]]
-binding = "RSS_CACHE"
-id = "e8c1996e2bd444e696281fe2c8df79b1"
-
-# 预览部署默认复用上面这个 namespace（读写的是同一份缓存数据）。
-# 若希望预览环境隔离，创建一个独立 namespace 并在此填 preview_id：
-# preview_id = "填入预览专用的 namespace id"
-
-# ---------- 待实现：限定 RSS 代理可抓取的域名 ----------
-# 注意：functions/api/rss.js 目前并未读取这个变量，配了也不会生效。
-# 需要时得先在 rss.js 里加上白名单判断，再取消下面的注释。
-# [vars]
-# ALLOWED_RSS_DOMAINS = "example.com,www.example.com"

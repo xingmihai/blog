@@ -488,6 +488,24 @@ export async function renderFriendDetail(container, params) {
   }
 }
 
+// 友链 RSS 数据由定时任务生成，整个会话内只需读一次
+let friendsRSSPromise = null;
+function loadFriendsRSS() {
+  if (!friendsRSSPromise) {
+    friendsRSSPromise = fetch('/friends-rss.json', {
+      signal: AbortSignal.timeout(8000),
+    }).then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }).catch(err => {
+      // 失败后清空，允许下次切换友链时重试
+      friendsRSSPromise = null;
+      throw err;
+    });
+  }
+  return friendsRSSPromise;
+}
+
 async function loadFriendRSS(f) {
   const rssContainer = $('friend-rss');
   if (!rssContainer) return;
@@ -507,35 +525,32 @@ async function loadFriendRSS(f) {
     return;
   }
 
-  const cacheKey = `rss_cache_${f.name}`;
-  // 缓存读取失败（隐私模式下 localStorage 可能抛错）不应影响主流程
   try {
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      const data = JSON.parse(cached);
-      if (Date.now() - data.ts < 10 * 60 * 1000) {
-        renderRSSList(rssContainer, data.items);
-        return;
-      }
+    // 读静态产物：由 .github/workflows/refresh-friends-rss.yml 定时生成并提交，
+    // 不再经过 /api/rss 代理，因此没有开放代理与 SSRF 面，也不需要 KV 绑定。
+    const data = await loadFriendsRSS();
+    const entry = data.feeds?.[f.rss];
+
+    if (!entry) {
+      throw new Error('该站点尚未收录 RSS 数据');
     }
-  } catch (e) {}
-
-  try {
-    const rssRes = await fetch(`/api/rss?url=${encodeURIComponent(f.rss)}`, {
-      signal: AbortSignal.timeout(8000)
-    });
-    if (!rssRes.ok) throw new Error(`HTTP ${rssRes.status}`);
-    const rssData = await rssRes.json();
-
-    if (rssData.status !== 'ok' || !rssData.items) {
-      throw new Error(rssData.message || 'Invalid RSS');
+    if (!entry.ok || !entry.items?.length) {
+      // 抓取失败时给出原因，并引导去源站
+      rssContainer.innerHTML = `<mdui-card style="padding:16px;text-align:center;">
+        <mdui-icon name="rss_feed" style="font-size:32px;opacity:0.4;"></mdui-icon>
+        <div class="mdui-typescale-body-medium" style="margin-top:8px;">
+          暂时无法获取文章${entry.error ? `（${escapeHtml(entry.error)}）` : ''}
+        </div>
+        <div style="margin-top:12px;">
+          <a href="${escapeHtml(f.url || '#')}" target="_blank" rel="noopener">
+            <mdui-button variant="tonal">直接访问源站</mdui-button>
+          </a>
+        </div>
+      </mdui-card>`;
+      return;
     }
 
-    // 缓存写入失败（配额满 / 隐私模式）不影响文章展示
-    try {
-      localStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), items: rssData.items }));
-    } catch (e) {}
-    renderRSSList(rssContainer, rssData.items);
+    renderRSSList(rssContainer, entry.items);
   } catch (err) {
     if (!rssContainer) return;
     rssContainer.innerHTML = `<mdui-card style="padding:16px;text-align:center;">

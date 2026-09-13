@@ -1,0 +1,57 @@
+name: 刷新友链 RSS
+
+# 定时抓取友链 RSS，转成静态 JSON 提交回仓库。
+# 站点直接读 friends-rss.json，因此不需要 Cloudflare Pages Functions，
+# 也没有对外的 ?url= 代理入口。
+
+on:
+  schedule:
+    # 每天 UTC 18:00（北京时间次日 02:00）执行
+    - cron: '0 18 * * *'
+  workflow_dispatch:    # 允许手动触发，方便加友链后立即刷新
+
+# 避免与 deploy 任务互相覆盖
+concurrency:
+  group: refresh-friends-rss
+  cancel-in-progress: false
+
+permissions:
+  contents: write       # 需要提交 friends-rss.json
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 脚本只依赖 Node 内置能力（fetch / AbortSignal.timeout），无需安装依赖
+      - name: 抓取友链 RSS
+        run: node scripts/fetch-friends-rss.mjs
+
+      # 全部源失败时脚本退出码非 0，此时不提交，保留上一次结果
+      - name: 检查是否有变更
+        id: diff
+        run: |
+          # -N：把首次生成的未跟踪文件也纳入 diff 比较，否则第一次运行时检测不到
+          git add -N friends-rss.json
+          if git diff --quiet -- friends-rss.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "本次抓取内容与上次一致，跳过提交"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 提交并推送
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add friends-rss.json
+          git commit -m "chore(friends): 刷新友链 RSS 数据
+
+          由 refresh-friends-rss.yml 定时生成"
+          git push

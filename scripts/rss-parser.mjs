@@ -1,58 +1,21 @@
-export async function onRequestGet(context) {
-  const { request } = context;
-  const url = new URL(request.url);
-  const feedUrl = url.searchParams.get('url');
+/**
+ * RSS/Atom 解析（纯函数，无平台依赖）
+ *
+ * 从原 functions/api/rss.js 迁移而来，供构建脚本与定时抓取脚本共用。
+ * 仅依赖标准库，可在 Node 与浏览器中运行。
+ */
 
-  if (!feedUrl) {
-    return jsonResponse({ status: 'error', message: 'Missing ?url= parameter' }, 400);
-  }
-
-  let targetUrl;
-  try {
-    targetUrl = new URL(feedUrl).href;
-  } catch {
-    return jsonResponse({ status: 'error', message: 'Invalid URL' }, 400);
-  }
-
-  try {
-    const rssRes = await fetch(targetUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RSS2JSON-Edge/1.0)' }
-    });
-
-    if (!rssRes.ok) {
-      return jsonResponse({ status: 'error', message: `Source returned ${rssRes.status}` }, 502);
-    }
-
-    const xmlText = await rssRes.text();
-    const result = parseRSS(xmlText, targetUrl);
-
-    return jsonResponse({ status: 'ok', ...result });
-
-  } catch (err) {
-    return jsonResponse({ status: 'error', message: err.message }, 500);
-  }
-}
-
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data, null, 2), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Cache-Control': 'public, max-age=300'
-    }
-  });
-}
-
-function parseRSS(xml, sourceUrl) {
+/**
+ * 解析 RSS 2.0 / Atom，返回结构化数据
+ * @param {string} xml 源文本
+ * @param {string} sourceUrl 源地址（用于 feed.link 兜底）
+ */
+export function parseRSS(xml, sourceUrl) {
   const isAtom = xml.includes('xmlns="http://www.w3.org/2005/Atom"');
 
   const feedTitle = extractTag(xml, 'title') || 'Untitled';
   const feedLink = extractTag(xml, 'link') || sourceUrl;
   const feedDesc = extractTag(xml, isAtom ? 'subtitle' : 'description') || '';
-
-  // 提取频道/Feed 级别的标签（部分 RSS 源会在 channel 里放 category）
   const feedTags = extractAllTags(xml.split(isAtom ? '<entry' : '<item')[0], 'category');
 
   const rawItems = isAtom
@@ -68,12 +31,19 @@ function parseRSS(xml, sourceUrl) {
     const pubDate = extractTag(raw, isAtom ? 'updated' : 'pubDate') || '';
     const guid = extractTag(raw, isAtom ? 'id' : 'guid') || link;
 
-    // 提取该条目的标签
     const tags = isAtom
-      ? extractAtomCategories(raw)   // Atom: <category term="xxx"/>
-      : extractAllTags(raw, 'category'); // RSS: <category>xxx</category>
+      ? extractAtomCategories(raw)
+      : extractAllTags(raw, 'category');
 
-    const cleanDesc = description.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    // 顺序很关键：必须先解码实体，再剥离标签。
+    // RSS 里描述有两种形态：
+    //   A 原始 HTML：<p>正文</p>        → 剥标签即可
+    //   B 转义后的：&lt;p&gt;正文&lt;/p&gt; → 先解码成 A，再剥标签
+    // 原实现只剥标签不解码，B 形态会原样输出 &lt;p&gt;正文&lt;/p&gt; 给用户看。
+    const cleanDesc = decodeHTMLEntities(description)
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     return {
       title: decodeHTMLEntities(title),
@@ -97,16 +67,14 @@ function parseRSS(xml, sourceUrl) {
   };
 }
 
-// 提取单标签内容（如 <title>xxx</title>）
-function extractTag(xml, tag) {
+export function extractTag(xml, tag) {
   const regex = new RegExp(`<${tag}[\\s>][^]*?</${tag}>`, 'i');
   const match = xml.match(regex);
   if (!match) return '';
   return match[0].replace(new RegExp(`</?${tag}[^>]*>`, 'gi'), '').trim();
 }
 
-// 提取 RSS 2.0 的所有 <category>xxx</category>
-function extractAllTags(xml, tag) {
+export function extractAllTags(xml, tag) {
   const regex = new RegExp(`<${tag}[^>]*>([^<]*)</${tag}>`, 'gi');
   const tags = [];
   let m;
@@ -117,8 +85,7 @@ function extractAllTags(xml, tag) {
   return tags;
 }
 
-// 提取 Atom 的 <category term="xxx"/>
-function extractAtomCategories(xml) {
+export function extractAtomCategories(xml) {
   const regex = /<category[^>]*term="([^"]+)"[^>]*\/?>/gi;
   const tags = [];
   let m;
@@ -129,21 +96,10 @@ function extractAtomCategories(xml) {
   return tags;
 }
 
-function decodeHTMLEntities(text) {
+export function decodeHTMLEntities(text) {
   const entities = {
     '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"',
     '&#39;': "'", '&#x27;': "'", '&nbsp;': ' '
   };
   return text.replace(/&(?:amp|lt|gt|quot|#39|#x27|nbsp);/g, m => entities[m] || m);
-}
-
-export function onRequestOptions() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type'
-    }
-  });
 }
