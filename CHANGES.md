@@ -98,3 +98,48 @@ npx wrangler kv:namespace create RSS_CACHE
 ```
 
 > 注意：`binding` 的名字（`DB` / `RATE_LIMIT` / `RSS_CACHE`）必须完全一致，代码里是按这些名字读取的。
+
+---
+
+## 二、后续改造：友链 RSS 改为定时抓取静态化
+
+### 背景
+此前 `/api/rss?url=` 是 Cloudflare Pages Functions 提供的代理接口，存在几个问题：
+
+- **开放代理**：接受任意 URL 且响应带 `Access-Control-Allow-Origin: *`，任何人可借本站域名代理任意 HTTP 请求
+- **SSRF 面**：`?url=` 无协议与目标限制，错误回显（`err.message`）可用于内网探测
+- 依赖 KV 绑定（`RSS_CACHE`），换平台部署即失效
+- `refreshCache` 未包 `context.waitUntil()`，响应返回后异步任务被终止，后台刷新实际不生效
+- `edge-functions/` 是死代码（Pages 只认 `functions/`），留着容易改错文件
+
+### 改动
+友链 RSS 的来源本就是 `friends.json` 里写死的静态地址，加友链才需要更新，
+因此没有修复这个代理的价值，直接改为**构建期/定时抓取**：
+
+| 新增 | 说明 |
+| --- | --- |
+| `scripts/rss-parser.mjs` | RSS/Atom 解析（从 rss.js 迁移，纯函数，无平台依赖） |
+| `scripts/fetch-friends-rss.mjs` | 读 `friends.json` → 并发抓取 → 生成 `friends-rss.json` |
+| `.github/workflows/refresh-friends-rss.yml` | 每日定时执行，有变更则提交回仓库 |
+| `friends-rss.json` | 静态产物，前端直接读取 |
+
+| 删除 | 原因 |
+| --- | --- |
+| `functions/api/rss.js` | 不再需要代理接口 |
+| `edge-functions/api/rss.js` | 死代码 |
+| `_routes.json` | 无 Functions 后不再需要路由规则 |
+| `wrangler.toml` 的 KV 绑定 | 无 Functions 后不再需要数据库绑定 |
+
+`assets/js/renderer.js` 由请求 `/api/rss?url=` 改为读取 `/friends-rss.json`，
+并去掉了原有的 localStorage 缓存（数据本身已是静态的，由 CDN 缓存）。
+
+### 顺带修复的解析缺陷
+`parseRSS` 原先只剥离 HTML 标签、不解码实体。RSS 中常见的转义形态
+（`<description>&lt;p&gt;正文&lt;/p&gt;</description>`）会原样输出 `&lt;p&gt;正文&lt;/p&gt;`。
+已改为**先解码实体、再剥离标签**，两种形态都能正确处理。
+
+### 健壮性
+- 单源超时 15 秒，不影响其他源（原实现无超时）
+- 响应超过 2MB 直接跳过（原实现无上限）
+- 错误信息统一文案，不暴露 DNS/IP 等内网信息
+- 单源失败沿用上次数据；全部失败则不写文件，保留上一次结果

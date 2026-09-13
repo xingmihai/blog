@@ -63,8 +63,9 @@ my-blog/
 │       ├── components.js # 组件（代码复制、灯箱等）
 │       ├── stats.js    # 访问量统计（Waline 计数接口）
 │       └── utils.js    # 工具函数
-├── functions/api/      # Cloudflare Pages Functions（API）
-│   └── rss.js          # 友链 RSS 代理缓存（KV）
+├── scripts/            # 构建与定时任务脚本
+│   ├── fetch-friends-rss.mjs  # 抓取友链 RSS → friends-rss.json
+│   └── rss-parser.mjs         # RSS/Atom 解析（纯函数）
 ├── index.html          # 入口页面
 ├── sw.js               # Service Worker
 ├── build.js            # 构建脚本
@@ -74,7 +75,7 @@ my-blog/
 ├── rss.xml             # RSS 源（自动生成）
 ├── sitemap.xml         # 站点地图（自动生成）
 ├── opensearch.xml      # 浏览器搜索（自动生成）
-├── wrangler.toml       # KV 绑定配置（仅友链 RSS 缓存）
+├── wrangler.toml       # Cloudflare Pages 构建配置（无数据库绑定）
 └── package.json
 ```
 
@@ -158,8 +159,16 @@ Waline 服务端地址在 `assets/js/stats.js` 顶部的 `WALINE_SERVER` 修改�
 
 ### 友链 RSS
 
-`functions/api/rss.js` 会代服务器抓取友链 RSS，因此默认只放行公网地址，并拦截内网网段。
-在 `wrangler.toml` 的 `ALLOWED_RSS_DOMAINS` 里填写域名白名单可进一步收紧。
+由 GitHub Actions 定时抓取，生成静态 `friends-rss.json` 并提交回仓库，前端直接读这个文件。
+
+- 工作流：`.github/workflows/refresh-friends-rss.yml`，默认每天 UTC 18:00 执行
+- 手动刷新：仓库 Actions → 刷新友链 RSS → Run workflow（加完友链可立即触发）
+- 本地执行：`node scripts/fetch-friends-rss.mjs`
+
+这样实现的好处：**不需要 Cloudflare Pages Functions，也不需要 KV 绑定**，
+换任何平台部署都能用；同时没有对外的 `?url=` 代理入口，不存在开放代理与 SSRF 风险。
+
+单个源抓取失败时会沿用上一次的数据，全部失败则不覆盖已有文件。
 
 ### 评论系统
 
