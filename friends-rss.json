@@ -1,10 +1,10 @@
 {
-  "updatedAt": "2026-10-18T20:06:40.599Z",
+  "updatedAt": "2026-10-19T21:59:41.697Z",
   "feeds": {
     "https://blog.xiaow.qzz.io/rss.xml": {
       "name": "笑的博客",
       "url": "https://blog.xiaow.qzz.io",
-      "updatedAt": "2026-10-18T20:06:40.599Z",
+      "updatedAt": "2026-10-19T21:59:41.697Z",
       "ok": true,
       "feed": {
         "title": "笑的博客",
@@ -99,7 +99,7 @@
     "https://www.vvhan.com/rss.xml": {
       "name": "韩小韩博客",
       "url": "https://www.vvhan.com",
-      "updatedAt": "2026-10-18T20:06:40.520Z",
+      "updatedAt": "2026-10-19T21:59:41.666Z",
       "ok": true,
       "feed": {
         "title": "韩小韩博客",
